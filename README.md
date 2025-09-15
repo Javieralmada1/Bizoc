@@ -1,4 +1,4 @@
-# Beelup‑lite (MVP)
+# Bizoc (MVP)
 
 Un MVP ultra simple para clubes que quieran subir partidos y que sus jugadores marquen y compartan highlights al instante.
 
