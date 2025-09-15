@@ -1,0 +1,44 @@
+# Node / Web
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Entornos y secretos
+.env
+.env.*
+*.key
+
+# SO/editores
+.DS_Store
+Thumbs.db
+.vscode/
+
+# dependencias / builds
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# secretos
+.env
+.env.*
+
+# IDE / SO
+.vscode/
+.DS_Store
+Thumbs.db
+
+# videos / grabaciones / binarios grandes
+public/videos/
+public/recordings/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.zip
+*.rar
+*.7z
+*.exe
