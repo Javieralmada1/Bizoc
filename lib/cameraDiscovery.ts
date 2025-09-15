@@ -1,6 +1,8 @@
 // lib/cameraDiscovery.ts
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
+import { spawn } from 'node:child_process'
+import net from 'node:net'
 
 const execAsync = promisify(exec)
 
@@ -12,34 +14,117 @@ export interface CameraDevice {
   status: 'online' | 'offline'
 }
 
-// Escanea la red local para encontrar cámaras Dahua
+export async function scanWithNmap(netRange: string, timeoutMs = 20000) {
+  const nmapBin = process.env.NMAP_PATH || 'nmap'
+  const args = [
+    '-sT',                // connect scan (no requiere Npcap)
+    '-p', '554,80',
+    '--open',
+    '-Pn',                // sin ping discovery
+    '-n',                 // sin DNS
+    '--max-retries', '1',
+    '--host-timeout', '5s',
+    netRange,
+    '-oG', '-'            // salida grepeable por stdout (una línea por host)
+  ]
+
+  return await new Promise<{hosts: {ip:string; rtsp:boolean; http:boolean}[]}>((resolve, reject) => {
+    const child = spawn(nmapBin, args, { windowsHide: true })
+    let out = ''; let err = ''; let done = false
+    const killTimer = setTimeout(() => { if (!done) { done = true; child.kill('SIGTERM'); reject(new Error('Nmap timeout')) } }, timeoutMs)
+
+    child.stdout.on('data', d => out += d.toString())
+    child.stderr.on('data', d => err += d.toString())
+    child.on('error', e => { clearTimeout(killTimer); if (!done) reject(e) })
+    child.on('close', code => {
+      clearTimeout(killTimer)
+      if (done) return
+      if (code !== 0 && !out.trim()) return reject(new Error(err || `nmap exited ${code}`))
+
+      // -oG pone todo en la MISMA línea: "Host: <ip> ... Ports: 80/open..., 554/open..."
+      const hosts = out.split('\n')
+        .map(l => l.trim())
+        .filter(l => l.startsWith('Host:') && l.includes('Ports:'))
+        .map(l => {
+          const ip = l.match(/^Host:\s+([\d.]+)/)?.[1] || ''
+          const rtsp = /\b554\/open\b/.test(l)
+          const http = /\b80\/open\b/.test(l)
+          return ip ? { ip, rtsp, http } : null
+        })
+        .filter(Boolean) as {ip:string; rtsp:boolean; http:boolean}[]
+
+      resolve({ hosts })
+    })
+  })
+}
+
+// Fallback sin Nmap: prueba TCP a 554 y 80
+export async function scanFallbackTcp(cidr: string, timeout = 500) {
+  const [base] = cidr.split('/')
+  const oct = base.split('.').map(Number)
+  const start = (oct[0]<<24)|(oct[1]<<16)|(oct[2]<<8)|1
+  const end   = (oct[0]<<24)|(oct[1]<<16)|(oct[2]<<8)|254
+
+  const ips: string[] = []
+  for (let i=start;i<=end;i++) {
+    ips.push(`${(i>>24)&255}.${(i>>16)&255}.${(i>>8)&255}.${i&255}`)
+  }
+
+  const test = (ip: string, port: number) => new Promise<boolean>(res => {
+    const s = new net.Socket()
+    s.setTimeout(timeout)
+    s.once('connect', () => { s.destroy(); res(true) })
+    s.once('timeout', () => { s.destroy(); res(false) })
+    s.once('error', () => res(false))
+    s.connect(port, ip)
+  })
+
+  const results: {ip:string; rtsp:boolean; http:boolean}[] = []
+  const batch = 64
+  for (let i=0;i<ips.length;i+=batch) {
+    const slice = ips.slice(i, i+batch)
+    const r = await Promise.all(slice.map(async ip => {
+      const [rtsp, http] = await Promise.all([test(ip, 554), test(ip, 80)])
+      return (rtsp || http) ? { ip, rtsp, http } : null
+    }))
+    results.push(...(r.filter(Boolean) as any))
+  }
+  return { hosts: results }
+}
+
+// Escanea la red local para encontrar cámaras Dahua (función principal)
 export async function discoverDahuaCameras(networkRange = '192.168.1.0/24'): Promise<CameraDevice[]> {
   try {
-    console.log(`🔍 Escaneando red ${networkRange} para cámaras Dahua...`)
+    console.log(`🔍 Escaneando red ${networkRange} para cámaras...`)
     
-    // Usar nmap para escanear puertos RTSP (554) y HTTP (80)
-    const { stdout } = await execAsync(`nmap -p 554,80 --open ${networkRange} -oG -`, { timeout: 30000 })
+    let hosts: {ip:string; rtsp:boolean; http:boolean}[] = []
+    
+    // Intentar primero con Nmap
+    try {
+      const nmapResult = await scanWithNmap(networkRange)
+      hosts = nmapResult.hosts
+      console.log(`✅ Nmap encontró ${hosts.length} dispositivos con puertos abiertos`)
+    } catch (nmapError) {
+      console.log(`⚠️ Nmap falló, usando fallback TCP: ${nmapError}`)
+      const tcpResult = await scanFallbackTcp(networkRange)
+      hosts = tcpResult.hosts
+      console.log(`✅ TCP scan encontró ${hosts.length} dispositivos`)
+    }
     
     const devices: CameraDevice[] = []
-    const lines = stdout.split('\n')
     
-    for (const line of lines) {
-      if (line.includes('554/open') || line.includes('80/open')) {
-        const ipMatch = line.match(/(\d+\.\d+\.\d+\.\d+)/)
-        if (ipMatch) {
-          const ip = ipMatch[1]
-          
-          // Verificar si es una cámara Dahua
-          const isDahua = await testDahuaConnection(ip)
-          if (isDahua) {
-            devices.push({
-              ip,
-              mac: await getMacAddress(ip) || 'unknown',
-              model: 'Dahua IPC-A22P (detectada)',
-              manufacturer: 'Dahua',
-              status: 'online'
-            })
-          }
+    for (const host of hosts) {
+      if (host.rtsp || host.http) {
+        // Verificar si es una cámara Dahua
+        const isDahua = await testDahuaConnection(host.ip)
+        if (isDahua) {
+          devices.push({
+            ip: host.ip,
+            mac: await getMacAddress(host.ip) || 'unknown',
+            model: 'Dahua IPC-A22P (detectada)',
+            manufacturer: 'Dahua',
+            status: 'online'
+          })
         }
       }
     }

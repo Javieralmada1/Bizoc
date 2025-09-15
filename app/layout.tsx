@@ -3,7 +3,7 @@ import Nav from '@/components/Nav'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Beelup lite',
+  title: 'Byzoc',
   description: 'MVP para revivir partidos y marcar highlights',
 }
 

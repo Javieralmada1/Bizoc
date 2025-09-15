@@ -70,10 +70,25 @@ export default function DashboardPage() {
     byDay: MetricDay[]
   } | null>(null)
 
+  // Agregar estados para el escáner de cámaras
+  const [scanning, setScanning] = useState(false)
+  const [cameras, setCameras] = useState<{ip: string; rtsp: boolean; http: boolean}[]>([])
+  const [netRange, setNetRange] = useState('192.168.1.0/24')
+
   useEffect(() => {
     (async () => {
       const { data } = await supabaseClient.auth.getUser()
       if (!data.user) { router.replace('/login?mode=signin'); return }
+
+      // ✅ Solo CLUB puede entrar a /dashboard
+      const r = await fetch('/api/auth/is-club', { cache: 'no-store' })
+      const j = await r.json()
+      if (!j.ok) {
+        // si es jugador, mandarlo a /player/dashboard, sino a /club
+        router.replace('/player/dashboard')
+        return
+      }
+
       setMe(data.user.email ?? null)
 
       await Promise.all([loadClubs(), loadCourts(), loadMatches()])
@@ -81,7 +96,7 @@ export default function DashboardPage() {
         const m = await fetch('/api/metrics', { cache: 'no-store' }).then(r => r.json())
         setMetrics(m)
       } catch { /* métrica opcional */ }
-
+      
       setLoading(false)
     })()
   }, [router])
@@ -176,6 +191,28 @@ export default function DashboardPage() {
     await loadClubs()
   }
 
+  async function scanCameras() {
+    setScanning(true)
+    setMessage('')
+    try {
+      const resp = await fetch('/api/cameras/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ netRange }) // p.ej. "192.168.0.0/24"
+      })
+      const json = await resp.json()
+      if (!resp.ok) throw new Error(json.error || 'Scan failed')
+
+      // json.hosts = [{ ip, rtsp, http }...], json.engine = 'nmap' | 'tcp'
+      setCameras(json.hosts || [])
+      setMessage(`✅ Encontradas ${json.hosts?.length || 0} cámaras usando ${json.engine}`)
+    } catch (err: any) {
+      setMessage(`❌ Error: ${err.message}`)
+    } finally {
+      setScanning(false)
+    }
+  }
+
   const courtsOfClub = useMemo(() => courts.filter(c => c.club_id === matchClub), [courts, matchClub])
 
   if (loading) return <div className="dash-loading">Cargando dashboard…</div>
@@ -190,7 +227,7 @@ export default function DashboardPage() {
     <div className="dash-shell">
       {/* Sidebar fija */}
       <aside className="dash-aside">
-        <div className="brand">Bizoc Admin</div>
+        <div className="brand">Byzoc Admin</div>
         <nav className="dash-nav">
           {['Resumen','Cámaras','Canchas','Partidos','Horarios','Métricas','Config'].map(lbl => (
             <a key={lbl} href={`#${lbl}`}><span className="lbl">{lbl}</span></a>
@@ -401,6 +438,70 @@ export default function DashboardPage() {
         {mode === 'reservas' && (
           <ReservationSystem />
         )}
+
+        {/* En el JSX, agregar la sección de cámaras: */}
+        <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 24, marginBottom: 24 }}>
+          <h3 style={{ color: 'white', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            📹 Descubrir Cámaras
+          </h3>
+          
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
+            <input
+              placeholder="192.168.1.0/24"
+              value={netRange}
+              onChange={e => setNetRange(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.05)',
+                color: 'white'
+              }}
+            />
+            <button
+              onClick={scanCameras}
+              disabled={scanning}
+              style={{
+                padding: '8px 16px',
+                background: scanning ? 'rgba(124,58,237,0.5)' : 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                color: 'white',
+                border: 'none',
+                borderRadius: 8,
+                cursor: scanning ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {scanning ? 'Escaneando...' : 'Buscar Cámaras'}
+            </button>
+          </div>
+
+          {cameras.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ color: '#9ca3af', marginBottom: 8 }}>Cámaras encontradas:</h4>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {cameras.map((cam, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: '8px 12px',
+                      background: 'rgba(255,255,255,0.08)',
+                      borderRadius: 8,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <span style={{ color: 'white' }}>{cam.ip}</span>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {cam.rtsp && <span style={{ color: '#10b981', fontSize: 12 }}>RTSP</span>}
+                      {cam.http && <span style={{ color: '#3b82f6', fontSize: 12 }}>HTTP</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   )

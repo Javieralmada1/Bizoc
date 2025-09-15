@@ -133,6 +133,11 @@ export default function Home() {
     setEditCity(c.city || '')
   }
 
+  async function loadClubs() {
+    const { data: clubsData } = await supabase.from('clubs').select('*')
+    setClubs(clubsData || [])
+  }
+
   async function saveEditClub() {
     if (!editingClubId) return
     const { error } = await supabase
@@ -283,8 +288,11 @@ export default function Home() {
               >
                 Ver Partidos
               </button>
-              <a href="/login" style={getNavItemStyle(false, true)}>
+              <a href="/club" style={getNavItemStyle(false, true)}>
                 Administrar Club
+              </a>
+              <a href="/player" style={getNavItemStyle(false, false)}>
+                Soy Jugador
               </a>
             </div>
           </div>
