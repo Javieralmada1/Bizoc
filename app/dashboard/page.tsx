@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase as supabaseClient } from '@/lib/supabaseClient'
 import CameraManagement from '@/components/CameraManagement'
 import CourtMap from '@/components/CourtMap'
+import ReservationSystem from '@/components/ReservationSystem'; // Asegúrate de importar el componente
 
 type Club = { id: string; name: string; province: string | null; city: string | null }
 type Court = { id: string; name: string; club_id: string; club?: { name: string | null } }
@@ -183,11 +184,13 @@ export default function DashboardPage() {
   const bestCourt = metrics?.byCourt?.[0]?.videos_count ?? 1
   const bestDay = Math.max(1, ...(metrics?.byDay ?? []).map(d => d.videos))
 
+  const mode = 'reservas'; // Asegúrate de que esta variable esté definida correctamente
+
   return (
     <div className="dash-shell">
       {/* Sidebar fija */}
       <aside className="dash-aside">
-        <div className="brand">Beelup Admin</div>
+        <div className="brand">Bizoc Admin</div>
         <nav className="dash-nav">
           {['Resumen','Cámaras','Canchas','Partidos','Horarios','Métricas','Config'].map(lbl => (
             <a key={lbl} href={`#${lbl}`}><span className="lbl">{lbl}</span></a>
@@ -393,6 +396,10 @@ export default function DashboardPage() {
             {message}
             <button className="msg-close" onClick={()=>setMessage('')}>×</button>
           </div>
+        )}
+
+        {mode === 'reservas' && (
+          <ReservationSystem />
         )}
       </main>
     </div>
