@@ -7,6 +7,7 @@ import CameraManagement from '@/components/CameraManagement'
 import CourtMap from '@/components/CourtMap'
 import ReservationSystem from '@/components/ReservationSystem'
 import ReservationsManager from '@/components/ReservationsManager'
+import TournamentCreationModal from '@/components/TournamentCreationModal'
 
 type Club = { id: string; name: string; province: string | null; city: string | null }
 type Court = { id: string; name: string; club_id: string; club?: { name: string | null } }
@@ -104,6 +105,7 @@ export default function DashboardPage() {
     startDate: ''
   })
   const [clubTournaments, setClubTournaments] = useState<any[]>([])
+  const [showTournamentModal, setShowTournamentModal] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -409,7 +411,9 @@ export default function DashboardPage() {
           {['Resumen','Cámaras','Canchas','Partidos','Horarios','Métricas','Config'].map(lbl => (
             <a key={lbl} href={`#${lbl}`}><span className="lbl">{lbl}</span></a>
           ))}
-          <a href="#Torneos" className="dash-nav-link">🏆 Torneos</a>
+          <a href="/torneos" target="_blank" className="dash-nav-link" style={{color: '#10b981'}}>
+            🏆 Torneos
+          </a>
         </nav>
         <div className="dash-user">
           <div className="muted">{me}</div>
@@ -455,6 +459,12 @@ export default function DashboardPage() {
               <div className="kpi-title">Canchas</div>
               <div className="kpi-big">{courts.length}</div>
               <div className="kpi-small">en total</div>
+            </div>
+
+            <div className="kpi-card">
+              <div className="kpi-title">Torneos Activos</div>
+              <div className="kpi-big">{clubTournaments.filter(t => t.status === 'registration' || t.status === 'in_progress').length}</div>
+              <div className="kpi-small">en curso</div>
             </div>
           </div>
 
@@ -778,60 +788,12 @@ export default function DashboardPage() {
             <div className="card">
               <h3>Crear Nuevo Torneo</h3>
               <div style={{ display: 'grid', gap: '16px' }}>
-                <form onSubmit={handleCreateTournament}>
-                  <div className="form-row">
-                    <input
-                      type="text"
-                      placeholder="Nombre del torneo"
-                      value={tournamentForm.name}
-                      onChange={(e) => setTournamentForm({...tournamentForm, name: e.target.value})}
-                      required
-                    />
-                    <select
-                      value={tournamentForm.category}
-                      onChange={(e) => setTournamentForm({...tournamentForm, category: e.target.value})}
-                    >
-                      <option value="primera">Primera</option>
-                      <option value="segunda">Segunda</option>
-                      <option value="tercera">Tercera</option>
-                    </select>
-                    <button type="submit" className="btn-primary">Crear Torneo</button>
-                  </div>
-                  
-                  <div className="form-row">
-                    <select
-                      value={tournamentForm.maxTeams}
-                      onChange={(e) => setTournamentForm({...tournamentForm, maxTeams: parseInt(e.target.value)})}
-                    >
-                      <option value={16}>16 equipos</option>
-                      <option value={32}>32 equipos</option>
-                      <option value={64}>64 equipos</option>
-                    </select>
-                    <select
-                      value={tournamentForm.scoringSystem}
-                      onChange={(e) => setTournamentForm({...tournamentForm, scoringSystem: e.target.value})}
-                    >
-                      <option value="traditional">Tradicional</option>
-                      <option value="suma7">Suma 7</option>
-                      <option value="suma11">Suma 11</option>
-                    </select>
-                    <input
-                      type="datetime-local"
-                      value={tournamentForm.startDate}
-                      onChange={(e) => setTournamentForm({...tournamentForm, startDate: e.target.value})}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="form-row">
-                    <input
-                      type="datetime-local"
-                      value={tournamentForm.registrationDeadline}
-                      onChange={(e) => setTournamentForm({...tournamentForm, registrationDeadline: e.target.value})}
-                      required
-                    />
-                  </div>
-                </form>
+                <button 
+                  onClick={() => setShowTournamentModal(true)}
+                  className="btn-primary"
+                >
+                  🏆 Crear Nuevo Torneo
+                </button>
               </div>
             </div>
 
@@ -877,6 +839,26 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Botón para acceder al sistema completo */}
+            <div className="card" style={{textAlign: 'center', padding: '30px'}}>
+              <h4 style={{marginBottom: '16px'}}>¿Necesitas más opciones?</h4>
+              <button 
+                onClick={() => window.open('/torneos', '_blank')}
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                🏆 Ir al Sistema Completo de Torneos
+              </button>
             </div>
           </div>
         </section>
@@ -956,6 +938,17 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      <TournamentCreationModal
+        isOpen={showTournamentModal}
+        onClose={() => setShowTournamentModal(false)}
+        onSuccess={loadTournaments}
+        courts={courts.map(({ id, name, club }) => ({
+          id,
+          name,
+          club: club ? { name: club.name ?? '' } : undefined
+        }))}
+      />
 
       <style jsx>{`
         .schedules-grid {

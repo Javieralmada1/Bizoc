@@ -1,99 +1,90 @@
-import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseServer'
+import { NextRequest, NextResponse } from 'next/server'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const statusFilter = searchParams.get('status')
-    
-    console.log('Loading tournaments with filter:', statusFilter)
+    const status = searchParams.get('status')
+    const category = searchParams.get('category')
+    const search = searchParams.get('search')
 
-    let query = supabaseAdmin
+    const supabase = createRouteHandlerClient({ cookies })
+    
+    let query = supabase
       .from('tournaments')
       .select(`
         *,
-        clubs!inner(name, city, province)
+        club:clubs(name, city, province)
       `)
+      .order('created_at', { ascending: false })
 
-    // Aplicar filtro de status si existe
-    if (statusFilter) {
-      query = query.eq('status', statusFilter)
+    if (status && status !== 'all') {
+      query = query.eq('status', status)
+    }
+
+    if (category && category !== 'all') {
+      query = query.eq('category', category)
+    }
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,venue.ilike.%${search}%`)
     }
 
     const { data: tournaments, error } = await query
-      .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error loading tournaments:', error)
+      console.error('Error fetching tournaments:', error)
       throw error
     }
 
-    // Contar equipos registrados para cada torneo
-    const tournamentsWithTeams = await Promise.all(
-      (tournaments || []).map(async (tournament) => {
-        const { count } = await supabaseAdmin
-          .from('tournament_teams')
-          .select('*', { count: 'exact', head: true })
-          .eq('tournament_id', tournament.id)
-
-        return {
-          ...tournament,
-          club: tournament.clubs,
-          registered_teams: count || 0
-        }
-      })
-    )
-
-    console.log('Tournaments loaded:', tournamentsWithTeams.length)
-
-    return NextResponse.json({ tournaments: tournamentsWithTeams })
-
-  } catch (error: any) {
-    console.error('API Error:', error)
-    return NextResponse.json({ 
-      error: error.message || 'Error al cargar los torneos',
-      tournaments: []
-    }, { status: 500 })
+    return NextResponse.json({ tournaments: tournaments || [] })
+  } catch (error) {
+    console.error('Error in GET /api/tournaments:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const supabase = createRouteHandlerClient({ cookies })
     const body = await request.json()
-    console.log('Creating tournament:', body)
 
-    // Validar datos requeridos
-    if (!body.name || !body.startDate || !body.registrationDeadline) {
-      return NextResponse.json({ 
-        error: 'Faltan campos obligatorios: name, startDate, registrationDeadline' 
-      }, { status: 400 })
+    // Obtener usuario actual
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    // Por ahora, usar el primer club disponible (temporal)
-    const { data: clubs, error: clubError } = await supabaseAdmin
+    // Verificar que el usuario tenga un club
+    const { data: club, error: clubError } = await supabase
       .from('clubs')
       .select('id')
-      .limit(1)
+      .eq('owner_id', user.id)
+      .single()
 
-    if (clubError || !clubs || clubs.length === 0) {
-      return NextResponse.json({ error: 'No se encontró un club disponible' }, { status: 400 })
+    if (clubError || !club) {
+      return NextResponse.json({ error: 'Debes tener un club registrado para crear torneos' }, { status: 400 })
     }
 
-    const clubId = clubs[0].id
-
-    // Crear el torneo
-    const { data: tournament, error } = await supabaseAdmin
+    const { data: tournament, error } = await supabase
       .from('tournaments')
-      .insert({
+      .insert([{
         name: body.name,
-        category: body.category || 'primera',
-        max_teams: body.maxTeams || 32,
-        scoring_system: body.scoringSystem || 'traditional',
-        start_date: new Date(body.startDate).toISOString(),
-        registration_deadline: new Date(body.registrationDeadline).toISOString(),
-        club_id: clubId,
-        status: 'registration'
-      })
+        category: body.category,
+        scoring_system: body.scoring_system || body.type,
+        venue: body.venue,
+        start_date: body.startDate,
+        end_date: body.endDate,
+        registration_deadline: body.registrationDeadline,
+        max_teams: parseInt(body.maxTeams),
+        entry_fee: body.entryFee,
+        prizes: body.prizes,
+        description: body.description,
+        status: 'registration',
+        club_id: club.id,
+        format: body.type || 'eliminacion'
+      }])
       .select()
       .single()
 
@@ -102,14 +93,9 @@ export async function POST(request: Request) {
       throw error
     }
 
-    console.log('Tournament created:', tournament)
-
     return NextResponse.json({ tournament })
-
-  } catch (error: any) {
-    console.error('API Error:', error)
-    return NextResponse.json({ 
-      error: error.message || 'Error al crear el torneo' 
-    }, { status: 500 })
+  } catch (error) {
+    console.error('Error in POST /api/tournaments:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
