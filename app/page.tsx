@@ -288,10 +288,34 @@ export default function Home() {
               >
                 Ver Partidos
               </button>
-              <a href="/club" style={getNavItemStyle(false, true)}>
-                Administrar Club
+              <a 
+                href="/torneos" 
+                style={getNavItemStyle(false, false)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  window.open('/torneos', '_blank')
+                }}
+              >
+                🏆 Torneos
               </a>
-              <a href="/player" style={getNavItemStyle(false, false)}>
+              <a 
+                href="/dashboard" 
+                style={getNavItemStyle(false, true)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  window.open('/dashboard', '_blank')
+                }}
+              >
+                Admin Club
+              </a>
+              <a 
+                href="/player/dashboard" 
+                style={getNavItemStyle(false, false)}
+                onClick={(e) => {
+                  e.preventDefault()
+                  window.open('/player/dashboard', '_blank')
+                }}
+              >
                 Soy Jugador
               </a>
             </div>
@@ -345,7 +369,7 @@ export default function Home() {
                       marginBottom: '40px',
                       lineHeight: '1.6'
                     }}>
-                      Reserva tu cancha en segundos y disfruta de grabaciones profesionales de tus partidos
+                      Reserva tu cancha en segundos, participa en torneos emocionantes y disfruta de grabaciones profesionales de tus partidos
                     </p>
                     
                     <div style={{
@@ -371,6 +395,23 @@ export default function Home() {
                         Reservar Cancha
                       </button>
                       <button 
+                        onClick={() => window.open('/torneos', '_blank')}
+                        style={{
+                          padding: '16px 32px',
+                          background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                          color: 'white',
+                          fontWeight: '600',
+                          borderRadius: '12px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '16px',
+                          transition: 'all 0.3s ease',
+                          boxShadow: '0 10px 25px rgba(124, 58, 237, 0.3)'
+                        }}
+                      >
+                        🏆 Ver Torneos
+                      </button>
+                      <button 
                         onClick={() => setMode('partidos')}
                         style={{
                           padding: '16px 32px',
@@ -387,6 +428,74 @@ export default function Home() {
                       >
                         Ver Partidos
                       </button>
+                    </div>
+
+                    {/* Quick access cards */}
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '16px',
+                      marginTop: '48px'
+                    }}>
+                      <div 
+                        onClick={() => window.open('/dashboard', '_blank')}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '16px',
+                          padding: '20px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          textAlign: 'center'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-4px)'
+                          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0px)'
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                        }}
+                      >
+                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏢</div>
+                        <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                          Soy Club
+                        </h3>
+                        <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+                          Gestiona canchas y torneos
+                        </p>
+                      </div>
+
+                      <div 
+                        onClick={() => window.open('/player/dashboard', '_blank')}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '16px',
+                          padding: '20px',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          textAlign: 'center'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-4px)'
+                          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0px)'
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                        }}
+                      >
+                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎾</div>
+                        <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                          Soy Jugador
+                        </h3>
+                        <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+                          Reservas y torneos
+                        </p>
+                      </div>
                     </div>
                   </div>
                   

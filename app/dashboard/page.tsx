@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { supabase as supabaseClient } from '@/lib/supabaseClient'
 import CameraManagement from '@/components/CameraManagement'
 import CourtMap from '@/components/CourtMap'
-import ReservationSystem from '@/components/ReservationSystem'; // Asegúrate de importar el componente
+import ReservationSystem from '@/components/ReservationSystem'
+import ReservationsManager from '@/components/ReservationsManager'
 
 type Club = { id: string; name: string; province: string | null; city: string | null }
 type Court = { id: string; name: string; club_id: string; club?: { name: string | null } }
@@ -52,16 +53,23 @@ export default function DashboardPage() {
   }, [collapsed])
 
   // forms existentes
-  const [clubName, setClubName] = useState(''); const [clubCity, setClubCity] = useState('')
-  const [courtName, setCourtName] = useState(''); const [courtClub, setCourtClub] = useState<string>('')
-  const [matchClub, setMatchClub] = useState<string>(''); const [matchCourt, setMatchCourt] = useState<string>('')
-  const [matchTitle, setMatchTitle] = useState(''); const [matchUrl, setMatchUrl] = useState(''); const [matchDate, setMatchDate] = useState('')
+  const [clubName, setClubName] = useState('')
+  const [clubCity, setClubCity] = useState('')
+  const [courtName, setCourtName] = useState('')
+  const [courtClub, setCourtClub] = useState<string>('')
+  const [matchClub, setMatchClub] = useState<string>('')
+  const [matchCourt, setMatchCourt] = useState<string>('')
+  const [matchTitle, setMatchTitle] = useState('')
+  const [matchUrl, setMatchUrl] = useState('')
+  const [matchDate, setMatchDate] = useState('')
 
   const [courtCams, setCourtCams] = useState([{ id: 'cam-1', name: 'Cam 1', x: 10, y: 20 }])
 
   // NUEVO: edición inline de club
   const [editingClubId, setEditingClubId] = useState<string | null>(null)
-  const [editName, setEditName] = useState(''); const [editProv, setEditProv] = useState(''); const [editCity, setEditCity] = useState('')
+  const [editName, setEditName] = useState('')
+  const [editProv, setEditProv] = useState('')
+  const [editCity, setEditCity] = useState('')
 
   // métricas (desde API)
   const [metrics, setMetrics] = useState<{
@@ -74,6 +82,28 @@ export default function DashboardPage() {
   const [scanning, setScanning] = useState(false)
   const [cameras, setCameras] = useState<{ip: string; rtsp: boolean; http: boolean}[]>([])
   const [netRange, setNetRange] = useState('192.168.1.0/24')
+
+  // Estados para gestión de horarios
+  const [schedules, setSchedules] = useState<any[]>([])
+  const [showScheduleForm, setShowScheduleForm] = useState(false)
+  const [scheduleForm, setScheduleForm] = useState({
+    court_id: '',
+    day_of_week: 0,
+    start_time: '08:00',
+    end_time: '22:00',
+    price_per_hour: 0
+  })
+
+  // NUEVO: estados para gestión de torneos
+  const [tournamentForm, setTournamentForm] = useState({
+    name: '',
+    category: 'primera',
+    maxTeams: 32,
+    scoringSystem: 'traditional',
+    registrationDeadline: '',
+    startDate: ''
+  })
+  const [clubTournaments, setClubTournaments] = useState<any[]>([])
 
   useEffect(() => {
     (async () => {
@@ -91,7 +121,7 @@ export default function DashboardPage() {
 
       setMe(data.user.email ?? null)
 
-      await Promise.all([loadClubs(), loadCourts(), loadMatches()])
+      await Promise.all([loadClubs(), loadCourts(), loadMatches(), loadSchedules(), loadTournaments()])
       try {
         const m = await fetch('/api/metrics', { cache: 'no-store' }).then(r => r.json())
         setMetrics(m)
@@ -108,10 +138,12 @@ export default function DashboardPage() {
       .order('created_at', { ascending: false })
     if (data) setClubs(data as Club[])
   }
+
   async function loadCourts() {
     const { data } = await supabaseClient.from('courts').select('id,name,club_id,club:clubs(name)').order('created_at', { ascending: false })
     if (data) setCourts(data as any)
   }
+
   async function loadMatches() {
     // últimos 60 días
     const since = new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString()
@@ -123,12 +155,151 @@ export default function DashboardPage() {
     if (data) setMatches(data as any)
   }
 
+  async function loadSchedules() {
+    if (!clubs.length) return
+    const { data } = await supabaseClient
+      .from('club_schedules')
+      .select(`
+        id, day_of_week, start_time, end_time, price_per_hour, active,
+        court:courts(name),
+        club:clubs(name)
+      `)
+      .order('day_of_week')
+      .order('start_time')
+    if (data) setSchedules(data)
+  }
+
+  async function loadTournaments() {
+    try {
+      const response = await fetch('/api/tournaments')
+      const data = await response.json()
+      setClubTournaments(data.tournaments || [])
+    } catch (error) {
+      console.error('Error loading tournaments:', error)
+    }
+  }
+
+  // NUEVA FUNCIÓN: handleCreateTournament
+  async function handleCreateTournament(e: React.FormEvent) {
+    e.preventDefault()
+    
+    if (!tournamentForm.name || !tournamentForm.startDate || !tournamentForm.registrationDeadline) {
+      setMessage('❌ Por favor completa todos los campos obligatorios')
+      return
+    }
+    
+    try {
+      setMessage('⏳ Creando torneo...')
+      
+      const response = await fetch('/api/tournaments', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: tournamentForm.name,
+          category: tournamentForm.category,
+          maxTeams: tournamentForm.maxTeams,
+          scoringSystem: tournamentForm.scoringSystem,
+          startDate: tournamentForm.startDate,
+          registrationDeadline: tournamentForm.registrationDeadline
+        })
+      })
+
+      const result = await response.json()
+      console.log('API Response:', result)
+
+      if (response.ok) {
+        setTournamentForm({
+          name: '',
+          category: 'primera',
+          maxTeams: 32,
+          scoringSystem: 'traditional',
+          registrationDeadline: '',
+          startDate: ''
+        })
+        await loadTournaments()
+        setMessage('✅ Torneo creado exitosamente')
+        
+        // Limpiar mensaje después de 3 segundos
+        setTimeout(() => setMessage(''), 3000)
+      } else {
+        console.error('Error response:', result)
+        setMessage(`❌ Error: ${result.error}`)
+      }
+    } catch (error: any) {
+      console.error('Network error:', error)
+      setMessage('❌ Error de conexión al crear el torneo')
+    }
+  }
+
+  async function addSchedule() {
+    if (!scheduleForm.court_id || !scheduleForm.start_time || !scheduleForm.end_time) {
+      setMessage('Completa todos los campos del horario.')
+      return
+    }
+
+    try {
+      // Primero obtener el club_id de la cancha seleccionada
+      const selectedCourt = courts.find(court => court.id === scheduleForm.court_id)
+      if (!selectedCourt) {
+        setMessage('Cancha no encontrada.')
+        return
+      }
+
+      const { error } = await supabaseClient.from('club_schedules').insert({
+        court_id: scheduleForm.court_id,
+        club_id: selectedCourt.club_id, // Obtener el club_id de la cancha
+        day_of_week: scheduleForm.day_of_week,
+        start_time: scheduleForm.start_time + ':00',
+        end_time: scheduleForm.end_time + ':00',
+        price_per_hour: scheduleForm.price_per_hour
+      })
+
+      if (error) {
+        console.error('Error al guardar horario:', error)
+        setMessage(`Error al guardar: ${error.message}`)
+        return
+      }
+      
+      setScheduleForm({
+        court_id: '',
+        day_of_week: 0,
+        start_time: '08:00',
+        end_time: '22:00',
+        price_per_hour: 0
+      })
+      setShowScheduleForm(false)
+      setMessage('Horario agregado correctamente.')
+      await loadSchedules()
+
+    } catch (err: any) {
+      console.error('Error:', err)
+      setMessage(`Error inesperado: ${err.message}`)
+    }
+  }
+
+  async function toggleSchedule(id: string, active: boolean) {
+    await supabaseClient
+      .from('club_schedules')
+      .update({ active: !active })
+      .eq('id', id)
+    await loadSchedules()
+  }
+
+  async function deleteSchedule(id: string) {
+    if (!confirm('¿Eliminar este horario?')) return
+    await supabaseClient.from('club_schedules').delete().eq('id', id)
+    await loadSchedules()
+  }
+
   async function addClub() {
     if (!clubName.trim()) { setMessage('El nombre del club es obligatorio.'); return }
     const { error } = await supabaseClient.from('clubs').insert({ name: clubName.trim(), city: clubCity.trim() || null })
     if (error) return setMessage(error.message)
     setClubName(''); setClubCity(''); setMessage('Club creado.'); await loadClubs()
   }
+
   async function deleteClub(id: string) {
     if (!confirm('¿Eliminar club?')) return
     await supabaseClient.from('clubs').delete().eq('id', id)
@@ -141,6 +312,7 @@ export default function DashboardPage() {
     if (error) return setMessage(error.message)
     setCourtName(''); setCourtClub(''); setMessage('Cancha creada.'); await loadCourts()
   }
+
   async function deleteCourt(id: string) {
     if (!confirm('¿Eliminar cancha?')) return
     await supabaseClient.from('courts').delete().eq('id', id)
@@ -161,13 +333,17 @@ export default function DashboardPage() {
     if (error) return setMessage(error.message)
     setMatchTitle(''); setMatchUrl(''); setMatchDate(''); setMatchClub(''); setMatchCourt(''); setMessage('Partido creado.'); await loadMatches()
   }
+
   async function deleteMatch(id: string) {
     if (!confirm('¿Eliminar partido?')) return
     await supabaseClient.from('matches').delete().eq('id', id)
     await loadMatches()
   }
 
-  async function handleLogout() { await supabaseClient.auth.signOut(); router.replace('/login?mode=signin') }
+  async function handleLogout() { 
+    await supabaseClient.auth.signOut(); 
+    router.replace('/login?mode=signin') 
+  }
 
   // NUEVO: helpers edición club
   function startEditClub(c: Club) {
@@ -176,6 +352,7 @@ export default function DashboardPage() {
     setEditProv(c.province || '')
     setEditCity(c.city || '')
   }
+
   async function saveEditClub() {
     if (!editingClubId) return
     const { error } = await supabaseClient
@@ -232,6 +409,7 @@ export default function DashboardPage() {
           {['Resumen','Cámaras','Canchas','Partidos','Horarios','Métricas','Config'].map(lbl => (
             <a key={lbl} href={`#${lbl}`}><span className="lbl">{lbl}</span></a>
           ))}
+          <a href="#Torneos" className="dash-nav-link">🏆 Torneos</a>
         </nav>
         <div className="dash-user">
           <div className="muted">{me}</div>
@@ -423,10 +601,285 @@ export default function DashboardPage() {
         </section>
 
         {/* HORARIOS / SCHEDULES */}
-        <SchedulesSection clubs={clubs} courts={courts} />
+        <section className="dash-section">
+          <div className="section-header">
+            <h2>
+              <span className="icon">🕐</span>
+              Gestión de Horarios
+            </h2>
+            <button 
+              onClick={() => setShowScheduleForm(!showScheduleForm)}
+              className="btn-primary"
+            >
+              {showScheduleForm ? 'Cancelar' : '+ Nuevo Horario'}
+            </button>
+          </div>
 
+          {showScheduleForm && (
+            <div className="form-card">
+              <h3>Configurar Nuevo Horario</h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Cancha</label>
+                  <select 
+                    value={scheduleForm.court_id} 
+                    onChange={e => setScheduleForm({...scheduleForm, court_id: e.target.value})}
+                  >
+                    <option value="">Selecciona una cancha</option>
+                    {courts.map(court => (
+                      <option key={court.id} value={court.id}>
+                        {court.name} - {court.club?.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Día de la semana</label>
+                  <select 
+                    value={scheduleForm.day_of_week} 
+                    onChange={e => setScheduleForm({...scheduleForm, day_of_week: parseInt(e.target.value)})}
+                  >
+                    <option value={0}>Domingo</option>
+                    <option value={1}>Lunes</option>
+                    <option value={2}>Martes</option>
+                    <option value={3}>Miércoles</option>
+                    <option value={4}>Jueves</option>
+                    <option value={5}>Viernes</option>
+                    <option value={6}>Sábado</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Hora de inicio</label>
+                  <input 
+                    type="time" 
+                    value={scheduleForm.start_time}
+                    onChange={e => setScheduleForm({...scheduleForm, start_time: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Hora de fin</label>
+                  <input 
+                    type="time" 
+                    value={scheduleForm.end_time}
+                    onChange={e => setScheduleForm({...scheduleForm, end_time: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Precio por hora ($)</label>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    step="0.01"
+                    value={scheduleForm.price_per_hour}
+                    onChange={e => setScheduleForm({...scheduleForm, price_per_hour: parseFloat(e.target.value) || 0})}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="form-group full-width">
+                  <button onClick={addSchedule} className="btn-primary">
+                    Guardar Horario
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="schedules-grid">
+        <h4 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>
+          Horarios Configurados
+        </h4>
+        
+        {schedules.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            color: 'rgba(255,255,255,0.6)', 
+            padding: '40px 20px',
+            border: '2px dashed rgba(255,255,255,0.1)',
+            borderRadius: '12px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🕐</div>
+            <p style={{ margin: '0 0 8px 0', fontSize: '16px' }}>No hay horarios configurados</p>
+            <small>Agrega horarios para que los jugadores puedan reservar canchas</small>
+          </div>
+        ) : (
+          schedules.map(schedule => (
+            <div key={schedule.id} className="schedule-card">
+              <div className="schedule-info">
+                <h5 style={{ color: 'white', margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>
+                  {schedule.court?.name || 'Cancha N/A'}
+                </h5>
+                <div className="schedule-meta">
+                  <span>
+                    <strong>{['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][schedule.day_of_week]}</strong>
+                  </span>
+                  <span>
+                    {schedule.start_time?.slice(0, 5)} - {schedule.end_time?.slice(0, 5)}
+                  </span>
+                  <span>${schedule.price_per_hour}/hora</span>
+                </div>
+              </div>
+              <div className="schedule-actions">
+                <button 
+                  onClick={() => toggleSchedule(schedule.id, schedule.active)}
+                  className={`btn-toggle ${schedule.active ? 'active' : 'inactive'}`}
+                >
+                  {schedule.active ? 'Activo' : 'Inactivo'}
+                </button>
+                <button 
+                  onClick={() => deleteSchedule(schedule.id)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: '#fca5a5',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+        </section>
+
+        {/* FIN de Gestión de Horarios */}
+
+        {/* AQUÍ VA EL PUNTO 3 - Gestión de Reservas */}
+        <section className="dash-section">
+          <div className="section-header">
+            <h2>
+              <span className="icon">📅</span>
+              Reservas Recibidas
+            </h2>
+          </div>
+          
+          <ReservationsManager />
+        </section>
+
+        {/* Continúa con Métricas u otras secciones existentes */}
         {/* MÉTRICAS extra */}
         <section id="Métricas" className="card"><h2>Métricas</h2><div className="muted">Listo para agregar más paneles/series.</div></section>
+
+        {/* Sección de Torneos */}
+        <section id="Torneos" style={{ marginBottom: '40px' }}>
+          <h2>🏆 Gestión de Torneos</h2>
+          
+          <div style={{ display: 'grid', gap: '20px' }}>
+            {/* Botón para crear torneo */}
+            <div className="card">
+              <h3>Crear Nuevo Torneo</h3>
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <form onSubmit={handleCreateTournament}>
+                  <div className="form-row">
+                    <input
+                      type="text"
+                      placeholder="Nombre del torneo"
+                      value={tournamentForm.name}
+                      onChange={(e) => setTournamentForm({...tournamentForm, name: e.target.value})}
+                      required
+                    />
+                    <select
+                      value={tournamentForm.category}
+                      onChange={(e) => setTournamentForm({...tournamentForm, category: e.target.value})}
+                    >
+                      <option value="primera">Primera</option>
+                      <option value="segunda">Segunda</option>
+                      <option value="tercera">Tercera</option>
+                    </select>
+                    <button type="submit" className="btn-primary">Crear Torneo</button>
+                  </div>
+                  
+                  <div className="form-row">
+                    <select
+                      value={tournamentForm.maxTeams}
+                      onChange={(e) => setTournamentForm({...tournamentForm, maxTeams: parseInt(e.target.value)})}
+                    >
+                      <option value={16}>16 equipos</option>
+                      <option value={32}>32 equipos</option>
+                      <option value={64}>64 equipos</option>
+                    </select>
+                    <select
+                      value={tournamentForm.scoringSystem}
+                      onChange={(e) => setTournamentForm({...tournamentForm, scoringSystem: e.target.value})}
+                    >
+                      <option value="traditional">Tradicional</option>
+                      <option value="suma7">Suma 7</option>
+                      <option value="suma11">Suma 11</option>
+                    </select>
+                    <input
+                      type="datetime-local"
+                      value={tournamentForm.startDate}
+                      onChange={(e) => setTournamentForm({...tournamentForm, startDate: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-row">
+                    <input
+                      type="datetime-local"
+                      value={tournamentForm.registrationDeadline}
+                      onChange={(e) => setTournamentForm({...tournamentForm, registrationDeadline: e.target.value})}
+                      required
+                    />
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Lista de torneos del club */}
+            <div className="card">
+              <h3>Mis Torneos</h3>
+              <div className="list-scroll">
+                {clubTournaments.map(tournament => (
+                  <div key={tournament.id} className="row">
+                    <div>
+                      <div className="row-title">{tournament.name}</div>
+                      <div className="muted xs">
+                        {tournament.category} • {tournament.registered_teams}/{tournament.max_teams} equipos
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <span style={{
+                        background: tournament.status === 'registration' ? 'rgba(16, 185, 129, 0.2)' : 
+                                   tournament.status === 'in_progress' ? 'rgba(245, 158, 11, 0.2)' : 
+                                   'rgba(156, 163, 175, 0.2)',
+                        color: tournament.status === 'registration' ? '#10b981' : 
+                               tournament.status === 'in_progress' ? '#f59e0b' : '#9ca3af',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px'
+                      }}>
+                        {tournament.status === 'registration' ? 'Inscripciones' : 
+                         tournament.status === 'in_progress' ? 'En curso' : 'Finalizado'}
+                      </span>
+                      <button 
+                        onClick={() => window.open(`/torneos/${tournament.id}`, '_blank')}
+                        className="btn-ghost"
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                      >
+                        Ver
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {clubTournaments.length === 0 && (
+                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: '20px' }}>
+                    No has creado torneos aún
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
 
         {message && (
           <div className="msg-ok">
@@ -503,308 +956,66 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      <style jsx>{`
+        .schedules-grid {
+          background: rgba(255, 255, 255, 0.08);
+          backdrop-filter: blur(20px);
+          border-radius: 16px;
+          padding: 24px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          margin-top: 20px;
+        }
+        
+        .schedule-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        
+        .schedule-info {
+          flex: 1;
+        }
+        
+        .schedule-meta {
+          display: flex;
+          gap: 20px;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .schedule-actions {
+          display: flex;
+          gap: 8px;
+        }
+        
+        .btn-toggle {
+          padding: 6px 12px;
+          border-radius: 6px;
+          border: none;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        .btn-toggle.active {
+          background: rgba(34, 197, 94, 0.2);
+          color: #86efac;
+          border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .btn-toggle.inactive {
+          background: rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+      `}</style>
     </div>
-  )
-}
-
-/* ---------- Sub-sección: Horarios (usa APIs reales) ---------- */
-
-function SchedulesSection({ clubs, courts }: { clubs: Club[]; courts: Court[] }) {
-  const [jobs, setJobs] = useState<any[]>([])
-  const [busyId, setBusyId] = useState<string | null>(null)
-
-  // formulario (jobs existentes)
-  const [club, setClub] = useState('')
-  const [court, setCourt] = useState('')
-  const [title, setTitle] = useState('Grabación')
-  const [startTime, setStartTime] = useState('18:00')   // HH:mm
-  const [minutes, setMinutes] = useState<number>(90)
-  const [days, setDays] = useState<boolean[]>([false,true,true,true,true,true,false]) // [D,L,M,Mi,J,V,S] L–V
-
-  // derived
-  const courtsFiltered = useMemo(() => courts.filter(c => c.club_id === club), [courts, club])
-
-  // cron preview
-  const cron = useMemo(() => {
-    const [h, m] = startTime.split(':')
-    const minute = Number.isFinite(parseInt(m ?? '0')) ? parseInt(m!,10) : 0
-    const hour = Number.isFinite(parseInt(h ?? '0')) ? parseInt(h!,10) : 0
-    // En cron: 0=Dom, 1=Lun…6=Sáb
-    const list = days
-      .map((on, idx) => (on ? idx : -1))
-      .filter(i => i >= 0)
-      .join(',')
-    return `${minute} ${hour} * * ${list || '*'}`
-  }, [startTime, days])
-
-  function setPreset(kind: 'LV' | 'SD' | 'ALL') {
-    if (kind === 'LV') setDays([false, true, true, true, true, true, false])
-    if (kind === 'SD') setDays([true, false, false, false, false, false, true])
-    if (kind === 'ALL') setDays([true, true, true, true, true, true, true])
-  }
-
-  async function refresh() {
-    const r = await fetch('/api/jobs', { cache: 'no-store' })
-    const d = await r.json().catch(()=>({}))
-    setJobs(d?.jobs || [])
-  }
-
-  useEffect(() => { refresh() }, [])
-
-  async function createJob() {
-    if (!club || !court) return alert('Elegí club y cancha')
-    if (!minutes || minutes <= 0) return alert('Duración inválida')
-
-    const r = await fetch('/api/jobs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, club_id: club, court_id: court, cron, minutes }),
-    })
-    const j = await r.json().catch(()=>({}))
-    if (!r.ok) return alert(j?.error ?? 'Error creando horario')
-    setJobs([j.job, ...jobs])
-  }
-
-  async function runNow(id: string) {
-    setBusyId(id)
-    try {
-      const r = await fetch(`/api/jobs/${id}`, { method: 'POST', cache: 'no-store' })
-      if (!r.ok) {
-        const t = await r.text().catch(()=> '')
-        return alert(`Error ${r.status}: ${t || 'no se pudo encolar'}`)
-      }
-      alert('Ejecución iniciada ✅')
-    } catch (e:any) {
-      alert(`Failed to fetch: ${e?.message || e}`)
-    } finally { setBusyId(null) }
-  }
-
-  async function toggle(id: string, enabled: boolean) {
-    setBusyId(id)
-    try {
-      const r = await fetch(`/api/jobs/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) })
-      if (!r.ok) {
-        const t = await r.text().catch(()=> '')
-        return alert(`Error ${r.status}: ${t}`)
-      }
-      setJobs(jobs.map(j => (j.id === id ? { ...j, enabled } : j)))
-    } finally { setBusyId(null) }
-  }
-
-  async function del(id: string) {
-    if (!confirm('¿Eliminar horario?')) return
-    setBusyId(id)
-    try {
-      await fetch(`/api/jobs/${id}`, { method: 'DELETE' })
-      setJobs(jobs.filter(j => j.id !== id))
-    } finally { setBusyId(null) }
-  }
-
-  const dayLabels = ['D', 'L', 'M', 'Mi', 'J', 'V', 'S'] // índice 0 = Domingo en cron
-
-  /* ===================== NUEVO: Turnos de reserva (Plantilla semanal) ===================== */
-  const [rsClub, setRsClub] = useState('')
-  const [rsCourt, setRsCourt] = useState('')
-  const [rsWeekday, setRsWeekday] = useState(0)       // 0=Lunes
-  const [rsStart, setRsStart] = useState('08:00')     // HH:mm
-  const [rsEnd, setRsEnd] = useState('12:00')         // HH:mm
-  const [rsSlot, setRsSlot] = useState(60)            // minutos
-  const rsCourts = useMemo(() => courts.filter(c => c.club_id === rsClub), [courts, rsClub])
-
-  async function saveReservationTemplate() {
-    if (!rsClub || !rsCourt) return alert('Elegí club y cancha')
-    if (!rsStart || !rsEnd || !rsSlot) return alert('Completa hora inicio/fin y duración')
-    const r = await fetch('/api/schedules', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        court_id: rsCourt,
-        weekday: rsWeekday,
-        start_time: rsStart,
-        end_time: rsEnd,
-        slot_minutes: rsSlot
-      })
-    })
-    const j = await r.json().catch(()=>({}))
-    if (!r.ok) return alert(j?.error || 'No se pudo guardar la plantilla')
-    alert('Plantilla guardada ✅')
-  }
-
-  /* ===================== NUEVO: Bloqueo por 1 día (reserva externa) ===================== */
-  const [bkClub, setBkClub] = useState('')
-  const [bkCourt, setBkCourt] = useState('')
-  const [bkDate, setBkDate] = useState<string>(new Date().toISOString().slice(0,10))
-  const [bkStart, setBkStart] = useState('08:00')
-  const [bkEnd, setBkEnd] = useState('09:00')
-  const bkCourts = useMemo(() => courts.filter(c => c.club_id === bkClub), [courts, bkClub])
-
-  function toIsoLocal(date: string, time: string) {
-    const [y,m,d] = date.split('-').map(Number)
-    const [hh,mm] = time.split(':').map(Number)
-    const dt = new Date(y, (m-1), d, hh, mm, 0, 0)
-    return dt.toISOString()
-  }
-
-  async function blockOneDaySlot() {
-    if (!bkClub || !bkCourt) return alert('Elegí club y cancha')
-    const start = toIsoLocal(bkDate, bkStart)
-    const end = toIsoLocal(bkDate, bkEnd)
-    const r = await fetch('/api/reservations', {
-      method:'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        club_id: bkClub,
-        court_id: bkCourt,
-        start,
-        end,
-        user_name: 'Bloqueo'
-      })
-    })
-    const j = await r.json().catch(()=>({}))
-    if (!r.ok) return alert(j?.error || 'No se pudo bloquear')
-    alert('Turno bloqueado por el día ✅')
-  }
-
-  return (
-    <section id="Horarios" className="card">
-      <h2>Horarios / Schedules</h2>
-
-      {/* ======= BLOQUE EXISTENTE: creación y gestión de jobs ======= */}
-      <div className="group">
-        <label className="label">Club</label>
-        <select className="input" value={club} onChange={e => { setClub(e.target.value); setCourt('') }}>
-          <option value="">Elegí un club…</option>
-          {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
-
-      <div className="group">
-        <label className="label">Cancha</label>
-        <select className="input" value={court} onChange={e => setCourt(e.target.value)} disabled={!club}>
-          <option value="">Elegí una cancha…</option>
-          {courtsFiltered.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-        </select>
-      </div>
-
-      <div className="grid-auto" style={{ marginTop: 8 }}>
-        <div className="group">
-          <label className="label">Título</label>
-          <input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Liga Nocturna" />
-        </div>
-
-        <div className="group">
-          <label className="label">Hora de inicio</label>
-          <input className="input" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
-          <div className="help">Se usa tu zona horaria local del servidor</div>
-        </div>
-
-        <div className="group">
-          <label className="label">Duración (minutos)</label>
-          <input className="input" type="number" min={1} value={minutes} onChange={e => setMinutes(parseInt(e.target.value || '0', 10))} />
-        </div>
-      </div>
-
-      <div className="group" style={{ marginTop: 8 }}>
-        <label className="label">Días</label>
-        <div className="dow">
-          {['D', 'L', 'M', 'Mi', 'J', 'V', 'S'].map((lbl, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`dow-btn ${days[i] ? 'on' : ''}`}
-              onClick={() => setDays(s => { const n=[...s]; n[i]=!n[i]; return n })}
-              aria-pressed={days[i]}
-            >
-              {lbl}
-            </button>
-          ))}
-          <div className="dow-sep" />
-          <button type="button" className="btn-chip" onClick={() => setPreset('LV')}>L–V</button>
-          <button type="button" className="btn-chip" onClick={() => setPreset('SD')}>S–D</button>
-          <button type="button" className="btn-chip" onClick={() => setPreset('ALL')}>Todos</button>
-        </div>
-      </div>
-
-      <div className="cron-preview">
-        <div className="muted xs">CRON generado</div>
-        <code className="cron">{cron}</code>
-      </div>
-
-      <div className="actions">
-        <button className="btn-primary" onClick={createJob} disabled={!club || !court || !minutes}>Crear horario</button>
-      </div>
-
-      <div className="list-scroll" style={{ marginTop: 16 }}>
-        {jobs.map(j => (
-          <div key={j.id} className="row">
-            <div>
-              <div className="row-title">{j.title}</div>
-              <div className="muted xs">{j.club?.name} — {j.court?.name} · cron: <code>{j.cron}</code> · {j.minutes} min</div>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn-secondary" onClick={() => runNow(j.id)} disabled={busyId===j.id}>Ejecutar ahora</button>
-              <button className="btn-primary" onClick={() => toggle(j.id, !j.enabled)} disabled={busyId===j.id}>{j.enabled ? 'Pausar' : 'Reanudar'}</button>
-              <button className="btn-danger" onClick={() => del(j.id)} disabled={busyId===j.id}>Eliminar</button>
-            </div>
-          </div>
-        ))}
-        {jobs.length === 0 && <div className="muted">Aún no hay horarios.</div>}
-      </div>
-
-      {/* ======= NUEVO: Plantilla semanal de turnos de RESERVA ======= */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <h2>Turnos de Reserva (Plantilla semanal)</h2>
-
-        <div className="grid-auto">
-          <select className="input" value={rsClub} onChange={e=>{ setRsClub(e.target.value); setRsCourt('') }}>
-            <option value="">Club…</option>
-            {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-
-          <select className="input" value={rsCourt} onChange={e=>setRsCourt(e.target.value)} disabled={!rsClub}>
-            <option value="">Cancha…</option>
-            {rsCourts.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-          </select>
-
-          <select className="input" value={rsWeekday} onChange={e=>setRsWeekday(parseInt(e.target.value,10))}>
-            {['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'].map((d,i)=>
-              <option key={i} value={i}>{d}</option>
-            )}
-          </select>
-
-          <input className="input" type="time" value={rsStart} onChange={e=>setRsStart(e.target.value)} />
-          <input className="input" type="time" value={rsEnd} onChange={e=>setRsEnd(e.target.value)} />
-          <input className="input" type="number" min={15} step={15} value={rsSlot} onChange={e=>setRsSlot(parseInt(e.target.value||'0',10))} placeholder="Minutos por turno" />
-        </div>
-
-        <div className="actions">
-          <button className="btn-primary" onClick={saveReservationTemplate} disabled={!rsCourt}>Guardar plantilla</button>
-        </div>
-      </div>
-
-      {/* ======= NUEVO: Bloquear un turno por 1 día ======= */}
-      <div className="card" style={{ marginTop: 16 }}>
-        <h2>Bloquear turno (solo un día)</h2>
-        <div className="grid-auto">
-          <select className="input" value={bkClub} onChange={e=>{ setBkClub(e.target.value); setBkCourt('') }}>
-            <option value="">Club…</option>
-            {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-
-          <select className="input" value={bkCourt} onChange={e=>setBkCourt(e.target.value)} disabled={!bkClub}>
-            <option value="">Cancha…</option>
-            {bkCourts.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
-          </select>
-
-          <input className="input" type="date" value={bkDate} onChange={e=>setBkDate(e.target.value)} />
-          <input className="input" type="time" value={bkStart} onChange={e=>setBkStart(e.target.value)} />
-          <input className="input" type="time" value={bkEnd} onChange={e=>setBkEnd(e.target.value)} />
-        </div>
-
-        <div className="actions">
-          <button className="btn-danger" onClick={blockOneDaySlot} disabled={!bkCourt}>Bloquear</button>
-        </div>
-      </div>
-    </section>
   )
 }

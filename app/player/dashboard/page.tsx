@@ -17,11 +17,32 @@ type PlayerProfile = {
   created_at: string
 }
 
+type Reservation = {
+  id: string
+  club_id: string
+  court_id: string
+  scheduled_at: string
+  number_of_players: number
+  notes: string | null
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+  created_at: string
+  clubs: {
+    name: string
+    address: string
+  }
+  courts: {
+    name: string
+    surface_type: string
+  }
+}
+
 export default function PlayerDashboard() {
   const router = useRouter()
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
+  const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [availableTournaments, setAvailableTournaments] = useState<any[]>([])
 
   useEffect(() => {
     (async () => {
@@ -46,6 +67,8 @@ export default function PlayerDashboard() {
         else router.replace('/player')
       } else {
         loadProfile() // Cargar perfil del jugador si existe
+        loadReservations() // Cargar reservas del jugador
+        loadAvailableTournaments() // Cargar torneos disponibles
       }
     })()
   }, [router])
@@ -76,6 +99,56 @@ export default function PlayerDashboard() {
     setLoading(false)
   }
 
+  async function loadReservations() {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return
+
+    const { data: reservations, error } = await supabase
+      .from('reservations')
+      .select(`
+        *,
+        clubs:club_id (name, address),
+        courts:court_id (name, surface_type)
+      `)
+      .eq('user_id', user.id)
+      .order('scheduled_at', { ascending: true })
+
+    if (error) {
+      console.error('Error cargando reservas:', error)
+    } else {
+      setReservations(reservations || [])
+    }
+  }
+
+  async function loadAvailableTournaments() {
+    try {
+      const response = await fetch('/api/tournaments?status=registration')
+      const data = await response.json()
+      
+      console.log('Torneos cargados desde API:', data) // Para debug
+      
+      setAvailableTournaments(data.tournaments || [])
+    } catch (error) {
+      console.error('Error loading tournaments:', error)
+    }
+  }
+
+  async function cancelReservation(reservationId: string) {
+    const { error } = await supabase
+      .from('reservations')
+      .update({ status: 'cancelled' })
+      .eq('id', reservationId)
+
+    if (error) {
+      console.error('Error cancelando reserva:', error)
+      alert('Error al cancelar la reserva')
+    } else {
+      alert('Reserva cancelada exitosamente')
+      loadReservations() // Recargar reservas
+    }
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     router.replace('/player')
@@ -97,6 +170,29 @@ export default function PlayerDashboard() {
   }
 
   const winRate = profile?.matches_played ? Math.round((profile.matches_won / profile.matches_played) * 100) : 0
+  const upcomingReservations = reservations.filter(r => 
+    new Date(r.scheduled_at) > new Date() && ['pending', 'confirmed'].includes(r.status)
+  )
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return '#f59e0b'
+      case 'confirmed': return '#10b981'
+      case 'cancelled': return '#ef4444'
+      case 'completed': return '#6b7280'
+      default: return '#9ca3af'
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pendiente'
+      case 'confirmed': return 'Confirmada'
+      case 'cancelled': return 'Cancelada'
+      case 'completed': return 'Completada'
+      default: return status
+    }
+  }
 
   return (
     <div style={{
@@ -227,9 +323,9 @@ export default function PlayerDashboard() {
             textAlign: 'center'
           }}>
             <div style={{ fontSize: '32px', fontWeight: '800', color: '#8b5cf6', marginBottom: '8px' }}>
-              {profile?.category}
+              {upcomingReservations.length}
             </div>
-            <div style={{ color: '#e5e7eb', fontSize: '14px' }}>Categoría Actual</div>
+            <div style={{ color: '#e5e7eb', fontSize: '14px' }}>Reservas Activas</div>
           </div>
         </div>
 
@@ -237,7 +333,8 @@ export default function PlayerDashboard() {
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          gap: '24px'
+          gap: '24px',
+          marginBottom: '24px'
         }}>
           {/* Perfil */}
           <div style={{
@@ -337,6 +434,235 @@ export default function PlayerDashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Reservas Section */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          padding: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          marginBottom: '24px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: '0' }}>
+              Mis Reservas
+            </h3>
+            <button
+              onClick={() => router.push('/player/dashboard/mis-reservas')}
+              style={{ 
+                padding: '16px', 
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', 
+                borderRadius: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0px)'}
+            >
+              <div style={{ color: 'white', fontWeight: '700', fontSize: '16px', marginBottom: '4px' }}>
+                📋 Mis Reservas
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px' }}>
+                Ver y gestionar tus reservas
+              </div>
+            </button>
+          </div>
+
+          {reservations.length === 0 ? (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '40px', 
+              color: '#9ca3af' 
+            }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📅</div>
+              <p>No tienes reservas aún</p>
+              <p style={{ fontSize: '14px' }}>¡Haz tu primera reserva en uno de nuestros clubes!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {reservations.slice(0, 5).map((reservation) => (
+                <div
+                  key={reservation.id}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                      <h4 style={{ color: 'white', margin: '0', fontSize: '16px', fontWeight: '600' }}>
+                        {reservation.clubs?.name}
+                      </h4>
+                      <span
+                        style={{
+                          background: `${getStatusColor(reservation.status)}20`,
+                          color: getStatusColor(reservation.status),
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        {getStatusText(reservation.status)}
+                      </span>
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '4px' }}>
+                      📍 {reservation.clubs?.address}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '4px' }}>
+                      🏸 {reservation.courts?.name} • {reservation.courts?.surface_type}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '14px' }}>
+                      🕐 {new Date(reservation.scheduled_at).toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '14px' }}>
+                      👥 {reservation.number_of_players} jugadores
+                    </div>
+                  </div>
+                  {['pending', 'confirmed'].includes(reservation.status) && new Date(reservation.scheduled_at) > new Date() && (
+                    <button
+                      onClick={() => {
+                        if (confirm('¿Estás seguro de que quieres cancelar esta reserva?')) {
+                          cancelReservation(reservation.id)
+                        }
+                      }}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: '#fca5a5',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              ))}
+              {reservations.length > 5 && (
+                <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                  <button
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#9ca3af',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Ver todas las reservas ({reservations.length})
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Sección de Torneos disponibles */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          padding: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          marginBottom: '24px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', margin: '0' }}>
+              🏆 Torneos Disponibles
+            </h3>
+            <button
+              onClick={() => window.open('/torneos', '_blank')}
+              style={{
+                background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Ver Todos
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {availableTournaments.slice(0, 3).map(tournament => (
+              <div
+                key={tournament.id}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => window.open(`/torneos/${tournament.id}`, '_blank')}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h4 style={{ color: 'white', margin: '0', fontSize: '16px', fontWeight: '600' }}>
+                    {tournament.name}
+                  </h4>
+                  <span style={{
+                    background: 'rgba(124, 58, 237, 0.2)',
+                    color: '#a78bfa',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px'
+                  }}>
+                    {tournament.category.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '8px' }}>
+                  🏢 {tournament.club?.name} • 📍 {tournament.club?.city}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ color: '#9ca3af', fontSize: '12px' }}>
+                    👥 {tournament.registered_teams}/{tournament.max_teams} equipos
+                  </div>
+                  {tournament.status === 'registration' && (
+                    <span style={{
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      color: '#10b981',
+                      padding: '4px 8px',
+                      borderRadius: '12px',
+                      fontSize: '12px'
+                    }}>
+                      Inscripciones Abiertas
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {availableTournaments.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#9ca3af', padding: '40px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏆</div>
+              <p>No hay torneos disponibles en este momento</p>
+            </div>
+          )}
         </div>
 
         {/* Back to home link */}
