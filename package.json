@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "cleanup": "tsx scripts/cleanup-expired-holds.ts",
     "worker": "node --env-file=.env.local worker/index.mjs",
     "job:post": "ts-node app/api/jobs/[id]/route.ts",
     "job:validate": "ts-node -e \"require('./app/api/jobs/[id]/route.ts')\"",
@@ -21,6 +22,7 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.56.0",
     "@tsparticles/engine": "^3.9.1",
+    "@types/pg": "^8.15.5",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
     "execa": "^9.6.0",
@@ -31,12 +33,14 @@
     "next": "^14.2.32",
     "node-cron": "^4.2.1",
     "node-rtsp-stream": "^0.0.9",
+    "pg": "^8.16.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-tsparticles": "^2.12.2",
     "tr46": "^5.1.1",
     "tsparticles": "^2.12.0",
     "tsparticles-engine": "^2.12.0",
+    "uuid": "^13.0.0",
     "video.js": "^8.23.4"
   },
   "devDependencies": {
@@ -44,6 +48,7 @@
     "@types/node": "20.14.9",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^10.0.0",
     "cliui": "^8.0.1",
     "concurrently": "^8.2.2",
     "eslint": "8.57.0",
@@ -53,3 +58,4 @@
     "yargs": "^17.7.2"
   }
 }
+

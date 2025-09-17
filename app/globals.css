@@ -1323,3 +1323,375 @@ section[id] {
     font-size: 14px;
   }
 }
+
+/* Agregar estos estilos CSS al final de app/globals.css */
+
+/* Estilos mejorados para estados de slots */
+.time-button.occupied {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important;
+  cursor: not-allowed !important;
+  position: relative;
+}
+
+.time-button.occupied::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    rgba(239, 68, 68, 0.1) 3px,
+    rgba(239, 68, 68, 0.1) 6px
+  );
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.time-button.held {
+  background: rgba(251, 191, 36, 0.2) !important;
+  border-color: #f59e0b !important;
+  color: #fbbf24 !important;
+  cursor: not-allowed !important;
+  position: relative;
+}
+
+.time-button.held::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #f59e0b;
+  border-top-color: transparent;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Animaciones para feedback visual */
+.time-button:hover:not(:disabled):not(.occupied):not(.held) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+}
+
+.time-button.selected {
+  animation: pulse-selected 2s infinite;
+}
+
+@keyframes pulse-selected {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+}
+
+/* Estado de procesando reserva */
+.confirm-button:disabled {
+  position: relative;
+  overflow: hidden;
+}
+
+.confirm-button:disabled::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.2), 
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  100% { left: 100%; }
+}
+
+/* Indicadores de precio y hora pico */
+.time-button .price {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.time-button:not(.occupied):not(.held) .price::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.time-button[data-peak="true"]:not(.occupied):not(.held) .price::after {
+  background: #f59e0b;
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 5px #f59e0b; }
+  to { box-shadow: 0 0 10px #f59e0b, 0 0 15px #f59e0b; }
+}
+
+/* Mensajes de estado mejorados */
+.error-message {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.success-message {
+  animation: slideInFromTop 0.5s ease-out;
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading states mejorados */
+.loading {
+  position: relative;
+}
+
+.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(139, 92, 246, 0.3);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: spin 1s linear infinite;
+}
+
+/* Tooltips para slots ocupados */
+.time-button[title] {
+  position: relative;
+}
+
+.time-button[title]:hover::before {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-bottom: 5px;
+}
+
+.time-button[title]:hover::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+}
+
+/* Refresh button animation */
+.refresh-button {
+  transition: transform 0.2s ease;
+}
+
+.refresh-button:hover {
+  transform: rotate(180deg);
+}
+
+.refresh-button:active {
+  transform: rotate(360deg);
+}
+
+/* Indicador de tiempo real */
+.real-time-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  font-size: 11px;
+  color: #10b981;
+}
+
+.real-time-indicator::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Estados de formulario mejorados */
+.form-group input:invalid,
+.form-group select:invalid,
+.form-group textarea:invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-group input:valid,
+.form-group select:valid,
+.form-group textarea:valid {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* Responsive mejoras */
+@media (max-width: 768px) {
+  .time-button {
+    min-height: 60px;
+    font-size: 14px;
+  }
+  
+  .time-button .time {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  .time-button .price {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  
+  .reservation-container > div[style*="grid-template-columns: 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  
+  .time-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .time-button {
+    padding: 16px 8px;
+    min-height: 70px;
+  }
+  
+  .confirm-button {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+  
+  .step-content {
+    padding: 20px 16px;
+  }
+}
+
+/* Dark theme improvements */
+@media (prefers-color-scheme: dark) {
+  .time-button {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .time-button:hover:not(:disabled) {
+    border-color: rgba(139, 92, 246, 0.6);
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Accesibilidad mejorada */
+@media (prefers-reduced-motion: reduce) {
+  .time-button,
+  .confirm-button,
+  .date-button {
+    animation: none;
+    transition: none;
+  }
+  
+  .time-button:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Focus states mejorados */
+.time-button:focus,
+.date-button:focus,
+.confirm-button:focus {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: 2px solid #16a085;
+  outline-offset: 2px;
+}
+
+/* Printing styles */
+@media print {
+  .reservation-system {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .time-button,
+  .date-button,
+  .confirm-button {
+    border: 1px solid #ccc !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  .time-button.occupied {
+    background: #f5f5f5 !important;
+  }
+  
+  .time-button.selected {
+    background: #e0e0e0 !important;
+    font-weight: bold !important;
+  }
+}

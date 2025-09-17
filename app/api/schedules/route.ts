@@ -1,83 +1,123 @@
-import { supabaseAdmin } from '@/lib/supabaseServer'
+// app/api/schedules/route.ts - API mejorada para obtener horarios disponibles
 
-function buildLocalDayRange(dateStr: string) {
-  const [y,m,d] = dateStr.split('-').map(Number)
-  const start = new Date(y, m-1, d, 0,0,0,0)
-  const end = new Date(y, m-1, d, 23,59,59,999)
-  return { start, end }
+import { NextRequest, NextResponse } from 'next/server'
+import { Pool } from 'pg'
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
+
+interface TimeSlot {
+  start: string
+  end: string
+  available: boolean
+  price: number
+  is_peak_hour: boolean
+  status: 'available' | 'occupied' | 'held'
+  booking_info?: {
+    customer_name?: string
+    booking_reference?: string
+  }
 }
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const courtId = searchParams.get('court_id')
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const court_id = searchParams.get('court_id')
   const date = searchParams.get('date')
-  if (!courtId || !date) return Response.json({ error: 'court_id y date requeridos' }, { status: 400 })
-
-  const jsDate = new Date(date + 'T00:00:00')
-  const weekday = (jsDate.getDay() + 6) % 7  // 0=Lunes
-
-  const { data: scheduleRows, error } = await supabaseAdmin
-    .from('schedules')
-    .select('*')
-    .eq('court_id', courtId)
-    .eq('weekday', weekday)
-    .eq('active', true)
-
-  if (error) return Response.json({ error: error.message }, { status: 500 })
-  if (!scheduleRows?.length) return Response.json({ slots: [] })
-
-  const template = scheduleRows[0]
-  const slotMinutes = template.slot_minutes
-  const [hStart, mStart] = template.start_time.split(':').map(Number)
-  const [hEnd, mEnd] = template.end_time.split(':').map(Number)
-  const base = new Date(date + 'T00:00:00')
-  const startMillis = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hStart, mStart).getTime()
-  const endMillis = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hEnd, mEnd).getTime()
-
-  const slots: { start: string; end: string; available: boolean }[] = []
-  for (let t = startMillis; t + slotMinutes*60000 <= endMillis; t += slotMinutes*60000) {
-    const slotStart = new Date(t)
-    const slotEnd = new Date(t + slotMinutes*60000)
-    slots.push({ start: slotStart.toISOString(), end: slotEnd.toISOString(), available: true })
+  
+  if (!court_id || !date) {
+    return NextResponse.json({ error: 'court_id y date son requeridos' }, { status: 400 })
   }
 
-  const { start, end } = buildLocalDayRange(date)
-  const { data: reservations, error: rErr } = await supabaseAdmin
-    .from('reservations')
-    .select('start_timestamp,end_timestamp')
-    .eq('court_id', courtId)
-    .gte('start_timestamp', start.toISOString())
-    .lt('start_timestamp', end.toISOString())
+  try {
+    // Primero limpiar reservas expiradas
+    await pool.query('SELECT cleanup_expired_holds()')
 
-  if (rErr) return Response.json({ error: rErr.message }, { status: 500 })
+    // Consulta optimizada para obtener disponibilidad
+    const availabilityQuery = `
+      WITH time_slots AS (
+        SELECT 
+          ca.court_id,
+          generate_series(
+            $2::date + ca.start_time,
+            $2::date + ca.end_time - INTERVAL '1 minute',
+            make_interval(mins => ca.slot_duration)
+          ) AS slot_start,
+          ca.slot_duration
+        FROM court_availability ca
+        WHERE ca.court_id = $1 
+          AND ca.day_of_week = EXTRACT(DOW FROM $2::date)
+          AND ca.is_active = true
+      ),
+      slot_details AS (
+        SELECT 
+          ts.court_id,
+          ts.slot_start,
+          ts.slot_start + make_interval(mins => ts.slot_duration) as slot_end,
+          COALESCE(pr.price, 25.00) as price,
+          COALESCE(pr.is_peak_hour, false) as is_peak_hour
+        FROM time_slots ts
+        LEFT JOIN pricing_rules pr ON pr.court_id = ts.court_id
+          AND ts.slot_start::time >= pr.start_time 
+          AND ts.slot_start::time < pr.end_time
+      )
+      SELECT 
+        sd.slot_start,
+        sd.slot_end,
+        sd.price,
+        sd.is_peak_hour,
+        CASE 
+          WHEN r.id IS NOT NULL THEN 'occupied'
+          WHEN rh.id IS NOT NULL THEN 'held'
+          ELSE 'available'
+        END as status,
+        r.customer_name,
+        r.booking_reference
+      FROM slot_details sd
+      LEFT JOIN reservations r ON r.court_id = sd.court_id 
+        AND r.reservation_date = $2::date
+        AND r.start_time::time = sd.slot_start::time
+        AND r.status IN ('confirmed', 'pending')
+      LEFT JOIN reservation_holds rh ON rh.court_id = sd.court_id 
+        AND rh.reservation_date = $2::date
+        AND rh.start_time::time = sd.slot_start::time
+        AND rh.expires_at > NOW()
+      ORDER BY sd.slot_start;
+    `
 
-  slots.forEach(s => {
-    if (reservations?.some(r =>
-      !(new Date(r.end_timestamp) <= new Date(s.start) || new Date(r.start_timestamp) >= new Date(s.end))
-    )) s.available = false
-  })
+    const result = await pool.query(availabilityQuery, [court_id, date])
+    
+    const slots: TimeSlot[] = result.rows.map(row => ({
+      start: row.slot_start.toISOString(),
+      end: row.slot_end.toISOString(),
+      available: row.status === 'available',
+      price: parseFloat(row.price),
+      is_peak_hour: row.is_peak_hour,
+      status: row.status,
+      ...(row.status === 'occupied' && {
+        booking_info: {
+          customer_name: row.customer_name,
+          booking_reference: row.booking_reference
+        }
+      })
+    }))
 
-  return Response.json({ slots, slotMinutes })
-}
+    return NextResponse.json({ 
+      slots,
+      court_id: parseInt(court_id),
+      date,
+      total_slots: slots.length,
+      available_slots: slots.filter(s => s.available).length
+    })
 
-export async function POST(req: Request) {
-  const body = await req.json()
-  const { court_id, weekday, start_time, end_time, slot_minutes } = body
-  if (!court_id || weekday === undefined || !start_time || !end_time || !slot_minutes)
-    return Response.json({ error: 'Campos requeridos' }, { status: 400 })
-
-  const { data, error } = await supabaseAdmin
-    .from('schedules')
-    .upsert({
-      court_id,
-      weekday,
-      start_time,
-      end_time,
-      slot_minutes,
-      active: true
-    }, { onConflict: 'court_id,weekday' })
-    .select()
-
-  if (error) return Response.json({ error: error.message }, { status: 500 })
-  return Response.json({ schedule: data?.[0] })
+  } catch (error) {
+    console.error('Error fetching schedules:', error)
+    return NextResponse.json({ 
+      error: 'Error interno del servidor',
+      slots: []
+    }, { status: 500 })
+  }
 }

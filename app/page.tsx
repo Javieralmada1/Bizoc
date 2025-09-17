@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import BeelupPlayer from '@/components/BeelupPlayer'
 import ReservationSystem from '@/components/ReservationSystem'
+import AuthHeader from '@/components/AuthHeader'
 
 const fechasDisponibles = Array.from({ length: 7 }, (_, i) => {
   const d = new Date()
@@ -46,7 +47,7 @@ type Club = { id: string; name: string; province: string | null; city: string | 
 
 export default function Home() {
   // Estados para el modo de la aplicación
-  const [mode, setMode] = useState('home') // 'home', 'reservas', 'partidos'
+  const [mode, setMode] = useState<'home' | 'reservas' | 'partidos' | 'features'>('home') // 'home', 'reservas', 'partidos', 'features'
   
   // Estados para búsqueda de partidos (existentes)
   const [clubs, setClubs] = useState<any[]>([])
@@ -335,7 +336,7 @@ export default function Home() {
               <section style={{
                 position: 'relative',
                 zIndex: 10,
-                minHeight: '100vh',
+                minHeight: 'calc(100vh - 70px)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -369,168 +370,211 @@ export default function Home() {
                       marginBottom: '40px',
                       lineHeight: '1.6'
                     }}>
-                      Reserva tu cancha en segundos, participa en torneos emocionantes y disfruta de grabaciones profesionales de tus partidos
+                      Grabá tus partidos, marcá los mejores puntos y compartí 
+                      highlights al instante. Todo en una plataforma simple y potente.
                     </p>
-                    
-                    <div style={{
-                      display: 'flex',
-                      gap: '20px',
-                      flexWrap: 'wrap'
-                    }}>
-                      <button 
-                        onClick={() => setMode('reservas')}
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => window.open('/dashboard', '_blank')}
                         style={{
                           padding: '16px 32px',
+                          borderRadius: '12px',
+                          border: 'none',
                           background: 'linear-gradient(135deg, #16a085, #3b82f6)',
                           color: 'white',
-                          fontWeight: '600',
-                          borderRadius: '12px',
-                          border: 'none',
-                          cursor: 'pointer',
                           fontSize: '16px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
                           transition: 'all 0.3s ease',
-                          boxShadow: '0 10px 25px rgba(22, 160, 133, 0.3)'
+                          boxShadow: '0 4px 24px rgba(22, 160, 133, 0.3)'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'translateY(-2px)'
+                          e.currentTarget.style.boxShadow = '0 8px 32px rgba(22, 160, 133, 0.4)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'translateY(0)'
+                          e.currentTarget.style.boxShadow = '0 4px 24px rgba(22, 160, 133, 0.3)'
                         }}
                       >
-                        Reservar Cancha
+                        Empezar Ahora
                       </button>
-                      <button 
-                        onClick={() => window.open('/torneos', '_blank')}
+                      <button
+                        onClick={() => setMode('features')}
                         style={{
                           padding: '16px 32px',
-                          background: 'linear-gradient(135deg, #7c3aed, #9333ea)',
-                          color: 'white',
-                          fontWeight: '600',
                           borderRadius: '12px',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '16px',
-                          transition: 'all 0.3s ease',
-                          boxShadow: '0 10px 25px rgba(124, 58, 237, 0.3)'
-                        }}
-                      >
-                        🏆 Ver Torneos
-                      </button>
-                      <button 
-                        onClick={() => setMode('partidos')}
-                        style={{
-                          padding: '16px 32px',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          border: '2px solid rgba(255, 255, 255, 0.2)',
+                          background: 'rgba(255, 255, 255, 0.05)',
                           color: 'white',
-                          fontWeight: '600',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
                           fontSize: '16px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
                           transition: 'all 0.3s ease',
                           backdropFilter: 'blur(10px)'
                         }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                        }}
                       >
-                        Ver Partidos
+                        Ver Demo
                       </button>
-                    </div>
-
-                    {/* Quick access cards */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: '16px',
-                      marginTop: '48px'
-                    }}>
-                      <div 
-                        onClick={() => window.open('/dashboard', '_blank')}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          backdropFilter: 'blur(10px)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '16px',
-                          padding: '20px',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          textAlign: 'center'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-4px)'
-                          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0px)'
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                        }}
-                      >
-                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏢</div>
-                        <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
-                          Soy Club
-                        </h3>
-                        <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
-                          Gestiona canchas y torneos
-                        </p>
-                      </div>
-
-                      <div 
-                        onClick={() => window.open('/player/dashboard', '_blank')}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          backdropFilter: 'blur(10px)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '16px',
-                          padding: '20px',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          textAlign: 'center'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-4px)'
-                          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0px)'
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                        }}
-                      >
-                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎾</div>
-                        <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0' }}>
-                          Soy Jugador
-                        </h3>
-                        <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
-                          Reservas y torneos
-                        </p>
-                      </div>
                     </div>
                   </div>
                   
                   <div style={{
+                    position: 'relative',
+                    height: '500px',
                     display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}>
                     <div style={{
-                      width: '400px',
-                      height: '300px',
-                      background: 'linear-gradient(135deg, #16a085, #3b82f6)',
+                      width: '100%',
+                      height: '100%',
+                      background: 'rgba(255, 255, 255, 0.05)',
                       borderRadius: '20px',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       position: 'relative',
-                      boxShadow: '0 25px 50px rgba(22, 160, 133, 0.3)'
+                      overflow: 'hidden'
                     }}>
                       <div style={{
-                        width: '80px',
-                        height: '80px',
-                        background: 'rgba(255, 255, 255, 0.2)',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease'
+                        fontSize: '120px',
+                        opacity: '0.5'
                       }}>
-                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-                          <path d="M15 10L30 20L15 30V10Z" fill="white"/>
-                        </svg>
+                        🎾
+                      </div>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '20px',
+                        left: '20px',
+                        right: '20px',
+                        padding: '16px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: '12px',
+                        backdropFilter: 'blur(10px)'
+                      }}>
+                        <div style={{ fontSize: '14px', color: '#16a085', marginBottom: '4px' }}>
+                          EN VIVO
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                          Club Pádel Buenos Aires
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#cbd5e1', marginTop: '4px' }}>
+                          Cancha 3 • Final del torneo
+                        </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Features Grid */}
+              <section style={{
+                position: 'relative',
+                zIndex: 10,
+                padding: '80px 16px'
+              }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                  <h2 style={{
+                    fontSize: '40px',
+                    fontWeight: '800',
+                    textAlign: 'center',
+                    marginBottom: '60px',
+                    background: 'linear-gradient(135deg, white, #16a085)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text'
+                  }}>
+                    Todo lo que necesitás
+                  </h2>
+                  
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: '24px'
+                  }}>
+                    {[
+                      {
+                        icon: '🎥',
+                        title: 'Grabación HD',
+                        desc: 'Capturá todos tus partidos en alta definición'
+                      },
+                      {
+                        icon: '⚡',
+                        title: 'Highlights Instantáneos',
+                        desc: 'Marcá y compartí los mejores puntos al instante'
+                      },
+                      {
+                        icon: '📱',
+                        title: 'Multi-plataforma',
+                        desc: 'Accedé desde cualquier dispositivo'
+                      },
+                      {
+                        icon: '🏆',
+                        title: 'Torneos',
+                        desc: 'Organizá y seguí torneos completos'
+                      },
+                      {
+                        icon: '📊',
+                        title: 'Estadísticas',
+                        desc: 'Analizá tu rendimiento con datos detallados'
+                      },
+                      {
+                        icon: '🔗',
+                        title: 'Compartir Fácil',
+                        desc: 'Links directos para cada highlight'
+                      }
+                    ].map((feature, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          padding: '32px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderRadius: '20px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          backdropFilter: 'blur(10px)',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'translateY(-4px)'
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
+                          e.currentTarget.style.borderColor = 'rgba(22, 160, 133, 0.3)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'translateY(0)'
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                        }}
+                      >
+                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>
+                          {feature.icon}
+                        </div>
+                        <h3 style={{
+                          fontSize: '20px',
+                          fontWeight: '600',
+                          marginBottom: '8px'
+                        }}>
+                          {feature.title}
+                        </h3>
+                        <p style={{
+                          fontSize: '14px',
+                          color: '#cbd5e1',
+                          lineHeight: '1.5'
+                        }}>
+                          {feature.desc}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </section>
