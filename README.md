@@ -41,7 +41,7 @@ Un MVP ultra simple para clubes que quieran subir partidos y que sus jugadores m
 
 ## Estructura
 - **app/(auth)/login** → login con magic link.
-- **app/dashboard** → CRUD mínimo de clubes, canchas, partidos.
+- **app/clubs/dashboard** → CRUD mínimo de clubes, canchas, partidos.
 - **app/m/[id]** → ver partido + tagger.
 - **lib/supabaseClient** → cliente Supabase (browser).
 

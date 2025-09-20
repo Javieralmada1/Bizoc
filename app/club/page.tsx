@@ -25,7 +25,7 @@ export default function ClubAuthPage() {
           .select('id')
           .eq('id', data.user.id)
           .single()
-        if (clubProfile) router.replace('/dashboard')
+        if (clubProfile) router.replace('/clubs/dashboard')
       }
     })
   }, [router])
@@ -47,7 +47,7 @@ export default function ClubAuthPage() {
           await supabase.auth.signOut()
           return
         }
-        router.push('/dashboard')
+        router.push('/clubs/dashboard')
       } else {
         // SIGNUP: crear cuenta, enviar OTP y mandar a /club/verify
         const { error: signUpErr } = await supabase.auth.signUp({ email, password })

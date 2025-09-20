@@ -1,4 +1,4 @@
-// app/api/admin/pricing/route.ts
+// app/api/admin/reservations/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -7,18 +7,20 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// GET - Obtener precios configurados para un club
+// GET - Obtener reservas de un club
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const club_id = searchParams.get('club_id')
+  const status = searchParams.get('status') || 'confirmed'
+  const limit = searchParams.get('limit') || '50'
   
   if (!club_id) {
     return NextResponse.json({ error: 'club_id es requerido' }, { status: 400 })
   }
 
   try {
-    const { data, error } = await supabase
-      .from('pricing_rules')
+    let query = supabase
+      .from('reservations')
       .select(`
         *,
         courts!inner (
@@ -27,52 +29,34 @@ export async function GET(request: NextRequest) {
           club_id
         )
       `)
-      .eq('courts.club_id', club_id)
-      .order('start_time')
+      .eq('club_id', club_id)
+      .order('reservation_date', { ascending: false })
+      .order('start_time', { ascending: false })
+      .limit(parseInt(limit))
 
-    if (error) throw error
-
-    return NextResponse.json({ pricing: data || [] })
-  } catch (error) {
-    console.error('Error fetching pricing:', error)
-    return NextResponse.json({ 
-      error: 'Error interno del servidor',
-      pricing: []
-    }, { status: 500 })
-  }
-}
-
-// POST - Crear nueva regla de precios
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { court_id, start_time, end_time, price, is_peak_hour = false } = body
-
-    if (!court_id || !start_time || !end_time || !price) {
-      return NextResponse.json({ 
-        error: 'Todos los campos son requeridos' 
-      }, { status: 400 })
+    // Filtrar por status si se especifica
+    if (status !== 'all') {
+      query = query.eq('status', status)
     }
 
-    const { data, error } = await supabase
-      .from('pricing_rules')
-      .insert({
-        court_id,
-        start_time,
-        end_time,
-        price: parseFloat(price),
-        is_peak_hour
-      })
-      .select()
-      .single()
+    const { data, error } = await query
 
     if (error) throw error
 
-    return NextResponse.json({ pricing: data }, { status: 201 })
+    // Transformar los datos para incluir el nombre de la cancha en el objeto principal
+    const reservations = data.map(reservation => ({
+      ...reservation,
+      court: {
+        name: reservation.courts.name
+      }
+    }))
+
+    return NextResponse.json({ reservations })
   } catch (error) {
-    console.error('Error creating pricing rule:', error)
+    console.error('Error fetching reservations:', error)
     return NextResponse.json({ 
-      error: 'Error interno del servidor'
+      error: 'Error interno del servidor',
+      reservations: []
     }, { status: 500 })
   }
 }

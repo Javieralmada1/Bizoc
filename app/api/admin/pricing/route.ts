@@ -54,13 +54,28 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Validar que start_time sea antes que end_time
+    if (start_time >= end_time) {
+      return NextResponse.json({ 
+        error: 'La hora de inicio debe ser anterior a la hora de fin' 
+      }, { status: 400 })
+    }
+
+    // Validar que el precio sea positivo
+    const priceFloat = parseFloat(price)
+    if (priceFloat <= 0) {
+      return NextResponse.json({ 
+        error: 'El precio debe ser mayor a 0' 
+      }, { status: 400 })
+    }
+
     const { data, error } = await supabase
       .from('pricing_rules')
       .insert({
         court_id,
         start_time,
         end_time,
-        price: parseFloat(price),
+        price: priceFloat,
         is_peak_hour
       })
       .select()
@@ -68,7 +83,11 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    return NextResponse.json({ pricing: data }, { status: 201 })
+    return NextResponse.json({ 
+      pricing: data,
+      message: 'Regla de precios creada exitosamente'
+    }, { status: 201 })
+
   } catch (error) {
     console.error('Error creating pricing rule:', error)
     return NextResponse.json({ 

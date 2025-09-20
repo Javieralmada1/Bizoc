@@ -92,19 +92,29 @@ export async function DELETE(
 ) {
   try {
     // Verificar si hay reservas futuras para este horario
-    const { data: reservations, error: reservationError } = await supabase
-      .from('reservations')
-      .select('id')
-      .eq('court_id', params.id)
-      .gte('reservation_date', new Date().toISOString().split('T')[0])
-      .eq('status', 'confirmed')
+    const { data: reservationCheck, error: checkError } = await supabase
+      .from('court_availability')
+      .select('court_id')
+      .eq('id', params.id)
+      .single()
 
-    if (reservationError) throw reservationError
+    if (checkError) throw checkError
 
-    if (reservations && reservations.length > 0) {
-      return NextResponse.json({ 
-        error: `No se puede eliminar el horario porque tiene ${reservations.length} reservas futuras confirmadas. Desactívalo en su lugar.`
-      }, { status: 409 })
+    if (reservationCheck) {
+      const { data: reservations, error: reservationError } = await supabase
+        .from('reservations')
+        .select('id')
+        .eq('court_id', reservationCheck.court_id)
+        .gte('reservation_date', new Date().toISOString().split('T')[0])
+        .eq('status', 'confirmed')
+
+      if (reservationError) throw reservationError
+
+      if (reservations && reservations.length > 0) {
+        return NextResponse.json({ 
+          error: `No se puede eliminar el horario porque tiene ${reservations.length} reservas futuras confirmadas. Desactívalo en su lugar.`
+        }, { status: 409 })
+      }
     }
 
     const { data, error } = await supabase

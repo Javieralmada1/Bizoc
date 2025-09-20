@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
-import BeelupPlayer from '@/components/BeelupPlayer'
-import ReservationSystem from '@/components/ReservationSystem'
-import AuthHeader from '@/components/AuthHeader'
+import BeelupPlayer from '@/components/players/BeelupPlayer'
+import ReservationSystem from '@/components/clubs/ReservationSystem'
+import AuthHeader from '@/components/shared/AuthHeader'
 
 const fechasDisponibles = Array.from({ length: 7 }, (_, i) => {
   const d = new Date()
@@ -300,21 +300,21 @@ export default function Home() {
                 🏆 Torneos
               </a>
               <a 
-                href="/dashboard" 
+                href="/clubs/dashboard" 
                 style={getNavItemStyle(false, true)}
                 onClick={(e) => {
                   e.preventDefault()
-                  window.open('/dashboard', '_blank')
+                  window.open('/clubs/dashboard', '_blank')
                 }}
               >
                 Admin Club
               </a>
               <a 
-                href="/player/dashboard" 
+                href="/player/clubs/dashboard" 
                 style={getNavItemStyle(false, false)}
                 onClick={(e) => {
                   e.preventDefault()
-                  window.open('/player/dashboard', '_blank')
+                  window.open('/player/clubs/dashboard', '_blank')
                 }}
               >
                 Soy Jugador
@@ -375,7 +375,7 @@ export default function Home() {
                     </p>
                     <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                       <button
-                        onClick={() => window.open('/dashboard', '_blank')}
+                        onClick={() => window.open('/clubs/dashboard', '_blank')}
                         style={{
                           padding: '16px 32px',
                           borderRadius: '12px',

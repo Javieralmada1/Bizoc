@@ -54,7 +54,7 @@ export default function ClubVerifyPage() {
         }
       }
       // (4) A dashboard
-      router.replace('/dashboard')
+      router.replace('/clubs/dashboard')
     } catch (e:any) {
       setMsg(e?.message ?? 'Verificado, pero no pudimos finalizar el alta. Reingresá.')
       router.replace('/club?mode=signin')
