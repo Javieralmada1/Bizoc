@@ -1,3 +1,9 @@
+/* @tailwind base; */
+/* @tailwind components; */
+/* @tailwind utilities; */
+
+/* Tu CSS personalizado existente va después... */
+
 /* ====== Reset & Base Styles ====== */
 *,*::before,*::after{
   box-sizing:border-box;
@@ -1695,3 +1701,404 @@ section[id] {
     font-weight: bold !important;
   }
 }
+
+/* ============================================
+   BYZOC - RESPONSIVE DESIGN COMPLETO
+   Mobile-first approach para iOS y Android
+   ============================================ */
+
+/* ====== Variables Responsive ====== */
+:root {
+  --mobile-padding: 16px;
+  --mobile-nav-height: 60px;
+  --tablet-padding: 24px;
+  --desktop-padding: 32px;
+}
+
+/* ====== Base Mobile Styles ====== */
+@media (max-width: 768px) {
+  
+  /* Body adjustments */
+  body {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+  }
+
+  /* ====== Navigation Mobile ====== */
+  .byzoc-nav {
+    height: var(--mobile-nav-height);
+  }
+
+  .byzoc-nav-container {
+    padding: 0 var(--mobile-padding);
+    height: var(--mobile-nav-height);
+  }
+
+  .byzoc-brand {
+    gap: 8px;
+  }
+
+  .byzoc-brand-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .byzoc-brand-text {
+    font-size: 18px;
+  }
+
+  .byzoc-brand-subtitle {
+    display: none; /* Ocultar subtítulo en móvil */
+  }
+
+  .byzoc-nav-menu {
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+
+  .byzoc-nav-menu::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .byzoc-nav-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ====== Dashboard Mobile Layout ====== */
+  .dash-shell {
+    flex-direction: column !important;
+    min-height: 100vh;
+  }
+
+  .dash-aside {
+    width: 100% !important;
+    height: auto !important;
+    position: relative !important;
+    order: 2;
+    border-right: none !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 16px !important;
+  }
+
+  .dash-aside .brand {
+    display: none; /* Ocultar brand en sidebar mobile */
+  }
+
+  .dash-nav {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+
+  .dash-nav a {
+    padding: 12px 8px !important;
+    text-align: center;
+    font-size: 12px;
+  }
+
+  .dash-nav a .icn {
+    font-size: 20px !important;
+    margin-bottom: 4px;
+  }
+
+  .dash-shell main {
+    margin-left: 0 !important;
+    padding: var(--mobile-padding) !important;
+    order: 1;
+    max-height: none !important;
+    padding-top: calc(var(--mobile-nav-height) + 16px) !important;
+  }
+
+  /* ====== Forms Mobile ====== */
+  .form-row,
+  .two-col,
+  .grid-auto {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding: 14px !important;
+  }
+
+  /* ====== Cards Mobile ====== */
+  .kpi-grid,
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .card,
+  .dash-card {
+    padding: 16px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* ====== Buttons Mobile ====== */
+  .btn,
+  button:not(.byzoc-nav-item) {
+    width: 100% !important;
+    padding: 14px 16px !important;
+    font-size: 15px !important;
+    margin-bottom: 8px;
+  }
+
+  .btn-group {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  /* ====== Tables Mobile ====== */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 600px;
+    font-size: 14px;
+  }
+
+  th, td {
+    padding: 8px !important;
+  }
+
+  /* ====== Modals Mobile ====== */
+  .modal,
+  .bp-modal {
+    padding: var(--mobile-padding);
+  }
+
+  .modal-content,
+  .bp-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* ====== Video Player Mobile ====== */
+  .video-container {
+    aspect-ratio: 16/9;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .bp-rec {
+    right: 8px !important;
+    top: 8px !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .bp-pill {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  /* ====== Reservation System Mobile ====== */
+  .reservation-system {
+    padding: var(--mobile-padding);
+  }
+
+  .reservation-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .time-slots {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ====== Landing Pages Mobile ====== */
+  .hero-section {
+    padding: 60px 16px 40px !important;
+    text-align: center;
+  }
+
+  .hero-title {
+    font-size: 32px !important;
+    line-height: 1.2 !important;
+  }
+
+  .hero-subtitle {
+    font-size: 16px !important;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  /* ====== Spacing adjustments ====== */
+  .container,
+  .max-w-6xl,
+  .max-w-4xl {
+    padding-left: var(--mobile-padding) !important;
+    padding-right: var(--mobile-padding) !important;
+  }
+
+  section {
+    padding: 40px 0 !important;
+  }
+
+  h1 { font-size: 28px !important; }
+  h2 { font-size: 24px !important; }
+  h3 { font-size: 20px !important; }
+  h4 { font-size: 18px !important; }
+
+  /* ====== Touch-friendly sizes ====== */
+  button,
+  a,
+  input,
+  select {
+    min-height: 44px; /* iOS recommended touch target */
+  }
+
+  /* ====== Prevent text selection on double tap ====== */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+}
+
+/* ====== Tablet Styles (768px - 1024px) ====== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .dash-shell main {
+    padding: var(--tablet-padding);
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .form-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ====== Safe Areas for iOS ====== */
+@supports (padding: max(0px)) {
+  .byzoc-nav-container {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .dash-shell main {
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+  }
+
+  .modal-content {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+
+/* ====== Landscape Mode Mobile ====== */
+@media (max-width: 768px) and (orientation: landscape) {
+  .hero-section {
+    padding: 40px 16px !important;
+  }
+
+  .modal-content,
+  .bp-card {
+    max-height: 80vh;
+  }
+
+  .dash-aside {
+    display: none; /* Ocultar sidebar en landscape */
+  }
+}
+
+/* ====== Android specific fixes ====== */
+@media (max-width: 768px) {
+  /* Fix para teclado Android */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    font-size: 16px; /* Prevent zoom */
+  }
+
+  /* Better scrolling on Android */
+  .scrollable {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* ====== iOS specific fixes ====== */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari */
+  .byzoc-nav {
+    position: -webkit-sticky;
+    position: sticky;
+  }
+
+  /* Fix iOS input zoom */
+  select,
+  textarea,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"] {
+    font-size: 16px;
+  }
+}
+
+/* ====== Accessibility ====== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ====== Dark mode support ====== */
+@media (prefers-color-scheme: dark) {
+  /* Ya está en dark por defecto, pero podemos ajustar */
+  :root {
+    --byzoc-bg-main: linear-gradient(135deg, #0a0f1a 0%, #1a1f2b 25%, #16a085 75%, #0a0f1a 100%);
+  }
+}
+
+/* ====== Print styles ====== */
+@media print {
+  .byzoc-nav,
+  .dash-aside,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  .dash-shell main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+

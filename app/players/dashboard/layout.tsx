@@ -53,69 +53,6 @@ export default function PlayerDashboardLayout({
     }
   }
 
-  const menuItems = [
-    {
-      href: '/players/dashboard',
-      label: 'Dashboard',
-      icon: '🏠',
-      description: 'Vista general'
-    },
-    {
-      href: '/players/dashboard/profile',
-      label: 'Datos',
-      icon: '👤',
-      description: 'Información personal'
-    },
-    {
-      href: '/players/dashboard/matches',
-      label: 'Historial',
-      icon: '📋',
-      description: 'Partidos jugados'
-    },
-    {
-      href: '/players/dashboard/stats',
-      label: 'Estadísticas',
-      icon: '📊',
-      description: 'Rendimiento detallado'
-    },
-    {
-      href: '/players/dashboard/recategorizations',
-      label: 'Recategorizaciones',
-      icon: '🔄',
-      description: 'Cambios de categoría'
-    },
-    {
-      href: '/players/dashboard/sanctions',
-      label: 'Sanciones',
-      icon: '⚠️',
-      description: 'Historial disciplinario'
-    },
-    {
-      href: '/players/dashboard/fiscal',
-      label: 'Fiscales',
-      icon: '📋',
-      description: 'Registros fiscales'
-    },
-    {
-      href: '/players/dashboard/encounters',
-      label: 'Enfrentamientos',
-      icon: '⚔️',
-      description: 'Historial vs rivales'
-    },
-    {
-      href: '/players/dashboard/reservations',
-      label: 'Reservas',
-      icon: '📅',
-      description: 'Mis reservas'
-    },
-    {
-      href: '/players/dashboard/tournaments',
-      label: 'Torneos',
-      icon: '🏆',
-      description: 'Competencias'
-    }
-  ]
-
   async function logout() {
     await supabase.auth.signOut()
     router.replace('/players')
@@ -129,16 +66,16 @@ export default function PlayerDashboardLayout({
     )
   }
 
-  // Si estamos en la página principal del dashboard, no mostrar sidebar
+  // IMPORTANTE: Para la página principal del dashboard, devolver solo children
   if (pathname === '/players/dashboard') {
     return <>{children}</>
   }
 
+  // Para otras páginas del dashboard, mostrar sidebar
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex">
-      {/* Sidebar */}
+      {/* Sidebar solo para sub-páginas */}
       <div className="w-80 bg-white/5 backdrop-blur-lg border-r border-white/10 flex flex-col">
-        {/* Player Header */}
         <div className="p-6 border-b border-white/10">
           <Link href="/players/dashboard" className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
@@ -150,36 +87,24 @@ export default function PlayerDashboardLayout({
             </div>
           </Link>
         </div>
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 p-4 overflow-y-auto">
+        
+        <div className="flex-1 p-4">
           <div className="space-y-2">
-            {menuItems.map((item) => {
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                    isActive
-                      ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400'
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  <div>
-                    <div className="font-medium text-sm">{item.label}</div>
-                    <div className={`text-xs ${isActive ? 'text-blue-400/80' : 'text-slate-500'}`}>
-                      {item.description}
-                    </div>
-                  </div>
-                </Link>
-              )
-            })}
+            <Link href="/players/dashboard" className="flex items-center gap-3 p-3 rounded-lg text-slate-300 hover:bg-white/5 hover:text-white">
+              <span className="text-lg">🏠</span>
+              <span className="font-medium text-sm">Dashboard</span>
+            </Link>
+            <Link href="/players/dashboard/profile" className="flex items-center gap-3 p-3 rounded-lg text-slate-300 hover:bg-white/5 hover:text-white">
+              <span className="text-lg">👤</span>
+              <span className="font-medium text-sm">Datos</span>
+            </Link>
+            <Link href="/players/dashboard/matches" className="flex items-center gap-3 p-3 rounded-lg text-slate-300 hover:bg-white/5 hover:text-white">
+              <span className="text-lg">📋</span>
+              <span className="font-medium text-sm">Historial</span>
+            </Link>
           </div>
-        </nav>
-
-        {/* Footer */}
+        </div>
+        
         <div className="p-4 border-t border-white/10">
           <button
             onClick={logout}
@@ -191,7 +116,6 @@ export default function PlayerDashboardLayout({
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 overflow-auto">
         {children}
       </div>

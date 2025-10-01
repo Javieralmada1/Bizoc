@@ -111,10 +111,10 @@ export default function AuthHeader() {
         { label: 'Configuración', icon: Settings, href: '/clubs/dashboard/settings' },
       ]
     : [
-        { label: 'Mi Perfil', icon: UserCircle, href: '/player/clubs/dashboard' },
-        { label: 'Mis Reservas', icon: Calendar, href: '/player/clubs/dashboard/reservas' },
-        { label: 'Mis Torneos', icon: Trophy, href: '/player/clubs/dashboard/torneos' },
-        { label: 'Configuración', icon: Settings, href: '/player/settings' },
+        { label: 'Mi Perfil', icon: UserCircle, href: '/players/dashboard' },
+        { label: 'Mis Reservas', icon: Calendar, href: '/players/dashboard/reservations' },
+        { label: 'Mis Torneos', icon: Trophy, href: '/players/dashboard/tournaments' },
+        { label: 'Configuración', icon: Settings, href: '/players/dashboard/profile' },
       ]
 
   if (loading) return null

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import BeelupPlayer from '@/components/players/BeelupPlayer'
 import ReservationSystem from '@/components/clubs/ReservationSystem'
-import AuthHeader from '@/components/shared/AuthHeader'
 
 const fechasDisponibles = Array.from({ length: 7 }, (_, i) => {
   const d = new Date()
@@ -11,7 +10,6 @@ const fechasDisponibles = Array.from({ length: 7 }, (_, i) => {
   return d.toISOString().slice(0, 10)
 })
 
-// Helper rango diario local
 function buildLocalDayRange(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map(Number)
   const start = new Date(y, m - 1, d, 0, 0, 0, 0)
@@ -19,7 +17,6 @@ function buildLocalDayRange(dateStr: string) {
   return { start, end }
 }
 
-// Carga filtrada
 async function fetchMatchesDelDia(
   supabase: any,
   { clubId, courtId, date }: { clubId: string; courtId: string; date: string },
@@ -46,10 +43,9 @@ async function fetchMatchesDelDia(
 type Club = { id: string; name: string; province: string | null; city: string | null }
 
 export default function Home() {
-  // Estados para el modo de la aplicación
-  const [mode, setMode] = useState<'home' | 'reservas' | 'partidos' | 'features'>('home') // 'home', 'reservas', 'partidos', 'features'
+  const [mode, setMode] = useState<'home' | 'reservas' | 'partidos' | 'features'>('home')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   
-  // Estados para búsqueda de partidos (existentes)
   const [clubs, setClubs] = useState<any[]>([])
   const [courts, setCourts] = useState<any[]>([])
   const [matchClub, setMatchClub] = useState('')
@@ -157,181 +153,335 @@ export default function Home() {
     }
   }
 
-  const navStyle = {
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    background: 'rgba(15, 23, 42, 0.9)',
-    backdropFilter: 'blur(20px)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
-  }
-
-  const containerStyle = {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '0 20px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: '70px'
-  }
-
-  const brandStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px'
-  }
-
-  const menuStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px'
-  }
-
-  const navItemBaseStyle = {
-    padding: '10px 16px',
-    borderRadius: '8px',
-    color: '#cbd5e1',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontWeight: '500',
-    fontSize: '14px',
-    transition: 'all 0.2s ease',
-    textDecoration: 'none'
-  }
-
-  const getNavItemStyle = (isActive: boolean, isAdmin = false) => ({
-    ...navItemBaseStyle,
-    background: isActive 
-      ? 'linear-gradient(135deg, #16a085, #3b82f6)' 
-      : isAdmin 
-        ? 'rgba(59, 130, 246, 0.1)' 
-        : 'transparent',
-    border: isAdmin ? '1px solid rgba(59, 130, 246, 0.3)' : 'none',
-    color: isActive ? 'white' : isAdmin ? '#60a5fa' : '#cbd5e1'
-  })
-
-  const mainContentStyle = {
-    paddingTop: '70px'
-  }
-
-  const gradientBackgroundStyle = {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #1e293b 0%, #7c3aed 50%, #1e293b 100%)',
-    position: 'relative' as const,
-    overflow: 'hidden'
-  }
-
-  const floatingElementStyle = (top: string, left: string, delay = '0s') => ({
-    position: 'absolute' as const,
-    top,
-    left,
-    width: '288px',
-    height: '288px',
-    background: 'rgba(59, 130, 246, 0.2)',
-    borderRadius: '50%',
-    filter: 'blur(64px)',
-    animation: `pulse 4s infinite ${delay}`
-  })
-
   return (
     <>
       <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.2; }
-          50% { opacity: 0.4; }
+        @keyframes float {
+          0%, 100% { 
+            transform: translateY(0px) scale(1);
+            opacity: 0.3; 
+          }
+          50% { 
+            transform: translateY(-20px) scale(1.05);
+            opacity: 0.5; 
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .hero-grid {
+            grid-template-columns: 1fr !important;
+            gap: 30px !important;
+          }
+          
+          .hero-title {
+            font-size: 32px !important;
+            line-height: 1.2 !important;
+          }
+          
+          .hero-subtitle {
+            font-size: 16px !important;
+          }
+          
+          .features-grid {
+            grid-template-columns: 1fr !important;
+          }
+          
+          .search-grid {
+            grid-template-columns: 1fr !important;
+          }
+          
+          .hero-image {
+            height: 300px !important;
+          }
         }
       `}</style>
       
       <div>
-        {/* Navegación principal */}
-        <nav style={navStyle}>
-          <div style={containerStyle}>
-            <div style={brandStyle}>
+        {/* Navegación responsive */}
+        <nav style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          background: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+          boxShadow: '0 2px 20px rgba(0, 0, 0, 0.05)'
+        }}>
+          <div style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            padding: '0 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: '70px'
+          }}>
+            {/* Logo */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
               <div style={{
                 width: '40px',
                 height: '40px',
-                background: 'linear-gradient(135deg, #16a085, #3b82f6)',
+                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
                 borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
               }}>
                 <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
                   <path d="M12 20L18 26L28 14" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <div>
-                <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'white', margin: 0 }}>Byzoc</h1>
-                <span style={{ fontSize: '12px', color: '#94a3b8' }}>Tu cancha, tu momento</span>
+                <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0 }}>Byzoc</h1>
+                <span style={{ fontSize: '12px', color: '#64748b', display: window.innerWidth < 768 ? 'none' : 'block' }}>
+                  Tu cancha, tu momento
+                </span>
               </div>
             </div>
 
-            <div style={menuStyle}>
+            {/* Menu Desktop */}
+            <div style={{
+              display: window.innerWidth >= 768 ? 'flex' : 'none',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
               <button 
-                style={getNavItemStyle(mode === 'home')}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: mode === 'home' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
+                  color: mode === 'home' ? 'white' : '#64748b',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  transition: 'all 0.2s ease'
+                }}
                 onClick={() => setMode('home')}
               >
                 Inicio
               </button>
               <button 
-                style={getNavItemStyle(mode === 'reservas')}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: mode === 'reservas' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
+                  color: mode === 'reservas' ? 'white' : '#64748b',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  transition: 'all 0.2s ease'
+                }}
                 onClick={() => setMode('reservas')}
               >
-                Reservar Cancha
+                Reservar
               </button>
               <button 
-                style={getNavItemStyle(mode === 'partidos')}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: mode === 'partidos' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
+                  color: mode === 'partidos' ? 'white' : '#64748b',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  transition: 'all 0.2s ease'
+                }}
                 onClick={() => setMode('partidos')}
               >
-                Ver Partidos
+                Partidos
               </button>
               <a 
                 href="/torneos" 
-                style={getNavItemStyle(false, false)}
-                onClick={(e) => {
-                  e.preventDefault()
-                  window.open('/torneos', '_blank')
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  color: '#64748b',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  fontSize: '14px'
                 }}
               >
                 🏆 Torneos
               </a>
               <a 
                 href="/clubs/dashboard" 
-                style={getNavItemStyle(false, true)}
-                onClick={(e) => {
-                  e.preventDefault()
-                  window.open('/clubs/dashboard', '_blank')
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#3b82f6',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  fontSize: '14px'
+                }}
+              >
+                Admin
+              </a>
+            </div>
+
+            {/* Botón Hamburguesa Mobile */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{
+                display: window.innerWidth >= 768 ? 'none' : 'flex',
+                width: '42px',
+                height: '42px',
+                borderRadius: '8px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: 'none',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <svg width="24" height="24" fill="none" stroke="#3b82f6" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
+
+          {/* Menu Mobile Desplegable */}
+          {mobileMenuOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '70px',
+              left: 0,
+              right: 0,
+              background: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(20px)',
+              borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <button 
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: mode === 'home' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
+                  color: mode === 'home' ? 'white' : '#64748b',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '15px',
+                  textAlign: 'left'
+                }}
+                onClick={() => { setMode('home'); setMobileMenuOpen(false); }}
+              >
+                Inicio
+              </button>
+              <button 
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: mode === 'reservas' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
+                  color: mode === 'reservas' ? 'white' : '#64748b',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '15px',
+                  textAlign: 'left'
+                }}
+                onClick={() => { setMode('reservas'); setMobileMenuOpen(false); }}
+              >
+                Reservar Cancha
+              </button>
+              <button 
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: mode === 'partidos' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'transparent',
+                  color: mode === 'partidos' ? 'white' : '#64748b',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: '15px',
+                  textAlign: 'left'
+                }}
+                onClick={() => { setMode('partidos'); setMobileMenuOpen(false); }}
+              >
+                Ver Partidos
+              </button>
+              <a 
+                href="/torneos" 
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  color: '#64748b',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  fontSize: '15px',
+                  display: 'block'
+                }}
+              >
+                🏆 Torneos
+              </a>
+              <hr style={{ border: 'none', borderTop: '1px solid rgba(0,0,0,0.1)', margin: '8px 0' }} />
+              <a 
+                href="/clubs/dashboard" 
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: '#3b82f6',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  fontSize: '15px',
+                  display: 'block',
+                  textAlign: 'center'
                 }}
               >
                 Admin Club
               </a>
               <a 
-                href="/player/clubs/dashboard" 
-                style={getNavItemStyle(false, false)}
-                onClick={(e) => {
-                  e.preventDefault()
-                  window.open('/player/clubs/dashboard', '_blank')
+                href="/players/dashboard" 
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(22, 160, 133, 0.1)',
+                  border: '1px solid rgba(22, 160, 133, 0.3)',
+                  color: '#16a085',
+                  textDecoration: 'none',
+                  fontWeight: '500',
+                  fontSize: '15px',
+                  display: 'block',
+                  textAlign: 'center'
                 }}
               >
                 Soy Jugador
               </a>
             </div>
-          </div>
+          )}
         </nav>
 
         {/* Contenido principal */}
-        <main style={mainContentStyle}>
+        <main style={{ paddingTop: '70px' }}>
           {/* Modo: Página de inicio */}
           {mode === 'home' && (
-            <div style={gradientBackgroundStyle}>
-              <div style={floatingElementStyle('40px', '25%')}></div>
-              <div style={floatingElementStyle('80px', '75%', '1s')}></div>
-              <div style={floatingElementStyle('40px', '33%', '2s')}></div>
-
+            <div style={{
+              minHeight: '100vh',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
               {/* Hero Section */}
               <section style={{
                 position: 'relative',
@@ -340,9 +490,9 @@ export default function Home() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '80px 16px 16px'
+                padding: '40px 16px'
               }}>
-                <div style={{ 
+                <div className="hero-grid" style={{ 
                   maxWidth: '1200px', 
                   width: '100%', 
                   display: 'grid', 
@@ -351,83 +501,47 @@ export default function Home() {
                   alignItems: 'center' 
                 }}>
                   <div>
-                    <h1 style={{
+                    <h1 className="hero-title" style={{
                       fontSize: '56px',
                       fontWeight: '800',
-                      background: 'linear-gradient(135deg, white, #16a085)',
+                      marginBottom: '24px',
+                      lineHeight: '1.1',
+                      background: 'linear-gradient(135deg, #1e293b, #3b82f6)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text',
-                      marginBottom: '24px',
-                      lineHeight: '1.1'
+                      backgroundClip: 'text'
                     }}>
-                      La mejor experiencia de 
-                      <span style={{ color: '#16a085' }}> Pádel</span>
+                      La mejor experiencia de <span style={{ color: '#3b82f6' }}>Pádel</span>
                     </h1>
-                    <p style={{
-                      fontSize: '20px',
-                      color: '#cbd5e1',
-                      marginBottom: '40px',
-                      lineHeight: '1.6'
+                    <p className="hero-subtitle" style={{ 
+                      fontSize: '20px', 
+                      color: '#64748b', 
+                      marginBottom: '40px', 
+                      lineHeight: '1.6' 
                     }}>
-                      Grabá tus partidos, marcá los mejores puntos y compartí 
-                      highlights al instante. Todo en una plataforma simple y potente.
+                      Grabá tus partidos, marcá los mejores puntos y compartí highlights al instante.
                     </p>
                     <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => window.open('/clubs/dashboard', '_blank')}
                         style={{
                           padding: '16px 32px',
-                          borderRadius: '12px',
+                          borderRadius: '16px',
                           border: 'none',
-                          background: 'linear-gradient(135deg, #16a085, #3b82f6)',
+                          background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
                           color: 'white',
                           fontSize: '16px',
                           fontWeight: '600',
                           cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          boxShadow: '0 4px 24px rgba(22, 160, 133, 0.3)'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.transform = 'translateY(-2px)'
-                          e.currentTarget.style.boxShadow = '0 8px 32px rgba(22, 160, 133, 0.4)'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.transform = 'translateY(0)'
-                          e.currentTarget.style.boxShadow = '0 4px 24px rgba(22, 160, 133, 0.3)'
+                          boxShadow: '0 8px 25px rgba(59, 130, 246, 0.4)'
                         }}
                       >
                         Empezar Ahora
                       </button>
-                      <button
-                        onClick={() => setMode('features')}
-                        style={{
-                          padding: '16px 32px',
-                          borderRadius: '12px',
-                          border: '2px solid rgba(255, 255, 255, 0.2)',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          color: 'white',
-                          fontSize: '16px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          backdropFilter: 'blur(10px)'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
-                        }}
-                      >
-                        Ver Demo
-                      </button>
                     </div>
                   </div>
                   
-                  <div style={{
+                  <div className="hero-image" style={{
                     position: 'relative',
                     height: '500px',
                     display: 'flex',
@@ -437,40 +551,31 @@ export default function Home() {
                     <div style={{
                       width: '100%',
                       height: '100%',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: '20px',
-                      backdropFilter: 'blur(20px)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'white',
+                      borderRadius: '24px',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 25px 50px rgba(0, 0, 0, 0.1)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       position: 'relative',
                       overflow: 'hidden'
                     }}>
-                      <div style={{
-                        fontSize: '120px',
-                        opacity: '0.5'
-                      }}>
-                        🎾
-                      </div>
+                      <div style={{ fontSize: '120px', opacity: '0.2' }}>🎾</div>
                       <div style={{
                         position: 'absolute',
                         bottom: '20px',
                         left: '20px',
                         right: '20px',
                         padding: '16px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        borderRadius: '12px',
-                        backdropFilter: 'blur(10px)'
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        borderRadius: '12px'
                       }}>
-                        <div style={{ fontSize: '14px', color: '#16a085', marginBottom: '4px' }}>
+                        <div style={{ fontSize: '14px', color: '#10b981', marginBottom: '4px' }}>
                           EN VIVO
                         </div>
-                        <div style={{ fontSize: '16px', fontWeight: '600' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: 'white' }}>
                           Club Pádel Buenos Aires
-                        </div>
-                        <div style={{ fontSize: '14px', color: '#cbd5e1', marginTop: '4px' }}>
-                          Cancha 3 • Final del torneo
                         </div>
                       </div>
                     </div>
@@ -482,7 +587,8 @@ export default function Home() {
               <section style={{
                 position: 'relative',
                 zIndex: 10,
-                padding: '80px 16px'
+                padding: '60px 16px',
+                background: 'rgba(248, 250, 252, 0.5)'
               }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                   <h2 style={{
@@ -490,87 +596,36 @@ export default function Home() {
                     fontWeight: '800',
                     textAlign: 'center',
                     marginBottom: '60px',
-                    background: 'linear-gradient(135deg, white, #16a085)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
+                    color: '#1e293b'
                   }}>
                     Todo lo que necesitás
                   </h2>
                   
-                  <div style={{
+                  <div className="features-grid" style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
                     gap: '24px'
                   }}>
                     {[
-                      {
-                        icon: '🎥',
-                        title: 'Grabación HD',
-                        desc: 'Capturá todos tus partidos en alta definición'
-                      },
-                      {
-                        icon: '⚡',
-                        title: 'Highlights Instantáneos',
-                        desc: 'Marcá y compartí los mejores puntos al instante'
-                      },
-                      {
-                        icon: '📱',
-                        title: 'Multi-plataforma',
-                        desc: 'Accedé desde cualquier dispositivo'
-                      },
-                      {
-                        icon: '🏆',
-                        title: 'Torneos',
-                        desc: 'Organizá y seguí torneos completos'
-                      },
-                      {
-                        icon: '📊',
-                        title: 'Estadísticas',
-                        desc: 'Analizá tu rendimiento con datos detallados'
-                      },
-                      {
-                        icon: '🔗',
-                        title: 'Compartir Fácil',
-                        desc: 'Links directos para cada highlight'
-                      }
+                      { icon: '🎥', title: 'Grabación HD', desc: 'Capturá todos tus partidos en alta definición' },
+                      { icon: '⚡', title: 'Highlights Instantáneos', desc: 'Marcá y compartí los mejores puntos al instante' },
+                      { icon: '📱', title: 'Multi-plataforma', desc: 'Accedé desde cualquier dispositivo' },
+                      { icon: '🏆', title: 'Torneos', desc: 'Organizá y seguí torneos completos' },
+                      { icon: '📊', title: 'Estadísticas', desc: 'Analizá tu rendimiento con datos detallados' },
+                      { icon: '🔗', title: 'Compartir Fácil', desc: 'Links directos para cada highlight' }
                     ].map((feature, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          padding: '32px',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          borderRadius: '20px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          backdropFilter: 'blur(10px)',
-                          transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.transform = 'translateY(-4px)'
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
-                          e.currentTarget.style.borderColor = 'rgba(22, 160, 133, 0.3)'
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.transform = 'translateY(0)'
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
-                        }}
-                      >
-                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-                          {feature.icon}
-                        </div>
-                        <h3 style={{
-                          fontSize: '20px',
-                          fontWeight: '600',
-                          marginBottom: '8px'
-                        }}>
+                      <div key={idx} style={{
+                        padding: '32px',
+                        background: 'white',
+                        borderRadius: '24px',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.08)'
+                      }}>
+                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>{feature.icon}</div>
+                        <h3 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px', color: '#1e293b' }}>
                           {feature.title}
                         </h3>
-                        <p style={{
-                          fontSize: '14px',
-                          color: '#cbd5e1',
-                          lineHeight: '1.5'
-                        }}>
+                        <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
                           {feature.desc}
                         </p>
                       </div>
@@ -582,271 +637,165 @@ export default function Home() {
           )}
 
           {/* Modo: Sistema de reservas */}
-          {mode === 'reservas' && (
-            <ReservationSystem />
-          )}
+          {mode === 'reservas' && <ReservationSystem />}
 
           {/* Modo: Búsqueda de partidos */}
           {mode === 'partidos' && (
-            <div style={gradientBackgroundStyle}>
-              <div style={floatingElementStyle('40px', '25%')}></div>
-              <div style={floatingElementStyle('80px', '75%', '1s')}></div>
-              <div style={floatingElementStyle('40px', '33%', '2s')}></div>
-
+            <div style={{
+              minHeight: '100vh',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%)',
+              padding: '40px 16px'
+            }}>
               <div style={{
-                position: 'relative',
-                zIndex: 10,
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '80px 16px 16px'
+                maxWidth: '512px',
+                width: '100%',
+                margin: '0 auto'
               }}>
-                <div style={{ maxWidth: '512px', width: '100%' }}>
-                  {/* Header */}
-                  <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '80px',
-                      height: '80px',
-                      background: 'linear-gradient(135deg, #3b82f6, #9333ea)',
-                      borderRadius: '16px',
-                      marginBottom: '24px',
-                      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-                    }}>
-                      <svg style={{ width: '40px', height: '40px', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <h2 style={{
-                      fontSize: '36px',
-                      fontWeight: '700',
-                      color: 'white',
-                      marginBottom: '16px'
-                    }}>Encuentra tu Partido</h2>
-                    <p style={{
-                      fontSize: '18px',
-                      color: '#cbd5e1',
-                      lineHeight: '1.6'
-                    }}>Busca y reproduce los videos de tus partidos grabados automáticamente</p>
-                  </div>
+                <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+                  <h2 style={{
+                    fontSize: '32px',
+                    fontWeight: '700',
+                    color: '#1e293b',
+                    marginBottom: '16px'
+                  }}>Encuentra tu Partido</h2>
+                  <p style={{ fontSize: '16px', color: '#64748b' }}>
+                    Busca y reproduce los videos de tus partidos
+                  </p>
+                </div>
 
-                  {/* Card de búsqueda */}
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '24px',
-                    padding: '32px',
-                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                <div style={{
+                  background: 'white',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '24px',
+                  padding: '24px',
+                  boxShadow: '0 25px 50px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div className="search-grid" style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '16px',
+                    marginBottom: '24px'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        background: 'linear-gradient(135deg, #3b82f6, #9333ea)',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginRight: '16px'
-                      }}>
-                        <svg style={{ width: '24px', height: '24px', color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      </div>
-                      <h3 style={{ fontSize: '20px', fontWeight: '600', color: 'white', margin: 0 }}>
-                        Buscar mi partido
-                      </h3>
-                    </div>
-
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                      gap: '16px',
-                      marginBottom: '24px'
-                    }}>
-                      <select
-                        value={matchClub}
-                        onChange={e => { setMatchClub(e.target.value); setMatchCourt('') }}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '12px',
-                          color: 'white',
-                          backdropFilter: 'blur(8px)',
-                          outline: 'none',
-                          fontSize: '16px'
-                        }}
-                      >
-                        <option value="" style={{ color: 'black' }}>Selecciona club...</option>
-                        {clubs.map(c => <option key={c.id} value={c.id} style={{ color: 'black' }}>{c.name}</option>)}
-                      </select>
-
-                      <select
-                        value={matchCourt}
-                        onChange={e => setMatchCourt(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '12px',
-                          color: 'white',
-                          backdropFilter: 'blur(8px)',
-                          outline: 'none',
-                          fontSize: '16px'
-                        }}
-                      >
-                        <option value="" style={{ color: 'black' }}>Selecciona cancha...</option>
-                        {courtsOfClub.map(co => <option key={co.id} value={co.id} style={{ color: 'black' }}>{co.name}</option>)}
-                      </select>
-
-                      <select
-                        value={matchDate}
-                        onChange={e => setMatchDate(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '12px',
-                          color: 'white',
-                          backdropFilter: 'blur(8px)',
-                          outline: 'none',
-                          fontSize: '16px'
-                        }}
-                      >
-                        <option value="" style={{ color: 'black' }}>Selecciona fecha...</option>
-                        {fechasDisponibles.map(f => (
-                          <option key={f} value={f} style={{ color: 'black' }}>
-                            {new Date(f).toLocaleDateString('es-ES')}
-                          </option>
-                        ))}
-                      </select>
-
-                      <select
-                        value={matchHora}
-                        onChange={e => setMatchHora(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '12px',
-                          color: 'white',
-                          backdropFilter: 'blur(8px)',
-                          outline: 'none',
-                          fontSize: '16px'
-                        }}
-                      >
-                        <option value="" style={{ color: 'black' }}>Selecciona horario...</option>
-                        {horariosUnicos.map(h => (
-                          <option key={h} value={h} style={{ color: 'black' }}>{h}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <button
-                      onClick={buscarPartidoSeguro}
+                    <select
+                      value={matchClub}
+                      onChange={e => { setMatchClub(e.target.value); setMatchCourt('') }}
                       style={{
                         width: '100%',
-                        padding: '16px 24px',
-                        background: 'linear-gradient(135deg, #3b82f6, #9333ea)',
-                        color: 'white',
-                        fontWeight: '600',
+                        padding: '12px 16px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '12px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        transition: 'all 0.3s ease',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
+                        fontSize: '16px'
                       }}
                     >
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                      Buscar Partido
-                    </button>
+                      <option value="">Selecciona club...</option>
+                      {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
 
-                    {/* Resultado de búsqueda */}
-                    {partidoEncontrado && (
-                      <div style={{
-                        marginTop: '24px',
-                        padding: '24px',
-                        background: 'rgba(16, 185, 129, 0.1)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '16px',
-                        border: '1px solid rgba(16, 185, 129, 0.3)'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          marginBottom: '16px'
-                        }}>
-                          <svg style={{ width: '24px', height: '24px', marginRight: '8px', color: '#10b981' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <h4 style={{ color: '#10b981', fontSize: '18px', fontWeight: '600', margin: 0 }}>
-                            Partido encontrado
-                          </h4>
-                        </div>
-                        {partidoEncontrado.video_url ? (
-                          <div style={{ marginTop: '20px' }}>
-                            <BeelupPlayer src={partidoEncontrado.video_url} />
-                          </div>
-                        ) : (
-                          <div style={{
-                            textAlign: 'center',
-                            padding: '48px',
-                            color: '#d1d5db'
-                          }}>
-                            <svg style={{ width: '64px', height: '64px', margin: '0 auto 16px', opacity: 0.5 }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            <p>No hay video disponible para este partido</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <select
+                      value={matchCourt}
+                      onChange={e => setMatchCourt(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        fontSize: '16px'
+                      }}
+                    >
+                      <option value="">Selecciona cancha...</option>
+                      {courtsOfClub.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
+                    </select>
 
-                    {partidoBuscado && !partidoEncontrado && (
-                      <div style={{
-                        marginTop: '24px',
-                        padding: '24px',
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '16px',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        textAlign: 'center'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginBottom: '12px'
-                        }}>
-                          <svg style={{ width: '24px', height: '24px', marginRight: '8px', color: '#fca5a5' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <h4 style={{ color: '#fca5a5', fontSize: '16px', fontWeight: '600', margin: 0 }}>
-                            No encontrado
-                          </h4>
-                        </div>
-                        <p style={{ color: '#fca5a5', margin: 0 }}>
-                          No se encontró ningún partido con esos datos
-                        </p>
-                      </div>
-                    )}
+                    <select
+                      value={matchDate}
+                      onChange={e => setMatchDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        fontSize: '16px'
+                      }}
+                    >
+                      <option value="">Fecha...</option>
+                      {fechasDisponibles.map(f => (
+                        <option key={f} value={f}>
+                          {new Date(f).toLocaleDateString('es-ES')}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={matchHora}
+                      onChange={e => setMatchHora(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        fontSize: '16px'
+                      }}
+                    >
+                      <option value="">Horario...</option>
+                      {horariosUnicos.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
                   </div>
+
+                  <button
+                    onClick={buscarPartidoSeguro}
+                    style={{
+                      width: '100%',
+                      padding: '16px 24px',
+                      background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                      color: 'white',
+                      fontWeight: '600',
+                      borderRadius: '12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    Buscar Partido
+                  </button>
+
+                  {partidoEncontrado && (
+                    <div style={{
+                      marginTop: '24px',
+                      padding: '24px',
+                      background: 'rgba(16, 185, 129, 0.05)',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(16, 185, 129, 0.2)'
+                    }}>
+                      <h4 style={{ color: '#10b981', marginBottom: '16px' }}>
+                        Partido encontrado
+                      </h4>
+                      {partidoEncontrado.video_url ? (
+                        <BeelupPlayer src={partidoEncontrado.video_url} />
+                      ) : (
+                        <p style={{ textAlign: 'center', color: '#64748b' }}>
+                          No hay video disponible
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {partidoBuscado && !partidoEncontrado && (
+                    <div style={{
+                      marginTop: '24px',
+                      padding: '24px',
+                      background: 'rgba(239, 68, 68, 0.05)',
+                      borderRadius: '16px',
+                      textAlign: 'center'
+                    }}>
+                      <p style={{ color: '#ef4444' }}>
+                        No se encontró ningún partido con esos datos
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
+import { LogOut, Settings, Calendar, Trophy, BarChart3, User, BookOpen } from 'lucide-react'
 
 type PlayerProfile = {
   id: string
@@ -18,10 +19,34 @@ type PlayerProfile = {
   created_at: string
 }
 
+interface Tournament {
+  id: string
+  name: string
+  status: string
+  registration_deadline: string
+  start_date: string
+  category: string
+  entry_fee?: number
+}
+
+interface Reservation {
+  id: string
+  scheduled_at: string
+  start_time: string
+  end_time: string
+  total_price: number
+  status: string
+  court: {
+    name: string
+  }
+}
+
 export default function PlayerDashboard() {
   const router = useRouter()
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tournaments, setTournaments] = useState<Tournament[]>([])
+  const [reservations, setReservations] = useState<Reservation[]>([])
 
   useEffect(() => {
     checkAuth()
@@ -50,7 +75,9 @@ export default function PlayerDashboard() {
         if (clubP) router.replace('/clubs/dashboard')
         else router.replace('/players/auth/login')
       } else {
-        loadProfile()
+        await loadProfile()
+        await loadTournaments()
+        await loadReservations(data.user.id)
       }
     } catch (error) {
       console.error('Error checking auth:', error)
@@ -81,6 +108,42 @@ export default function PlayerDashboard() {
     setLoading(false)
   }
 
+  async function loadTournaments() {
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('status', 'registration')
+        .order('registration_deadline', { ascending: true })
+        .limit(3)
+
+      if (error) throw error
+      setTournaments(data || [])
+    } catch (error) {
+      console.error('Error loading tournaments:', error)
+    }
+  }
+
+  async function loadReservations(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('reservations')
+        .select(`
+          *,
+          court:courts(name)
+        `)
+        .eq('customer_email', userId)
+        .gte('scheduled_at', new Date().toISOString().split('T')[0])
+        .order('scheduled_at', { ascending: true })
+        .limit(3)
+
+      if (error) throw error
+      setReservations(data || [])
+    } catch (error) {
+      console.error('Error loading reservations:', error)
+    }
+  }
+
   async function logout() {
     await supabase.auth.signOut()
     router.replace('/players')
@@ -88,8 +151,14 @@ export default function PlayerDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center">
-        <div className="text-slate-300 text-lg">Cargando dashboard...</div>
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ color: '#cbd5e1', fontSize: '18px' }}>Cargando dashboard...</div>
       </div>
     )
   }
@@ -102,226 +171,402 @@ export default function PlayerDashboard() {
     : profile?.first_name || 'Jugador'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
-      {/* Header */}
-      <header className="bg-white/5 backdrop-blur-lg border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl font-bold">🎾</span>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%)',
+      padding: '24px'
+    }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        {/* Header */}
+        <header style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          padding: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          marginBottom: '32px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                fontSize: '24px',
+                fontWeight: 'bold'
+              }}>
+                {displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
               </div>
               <div>
-                <h1 className="text-white text-xl font-semibold">¡Hola, {displayName}!</h1>
-                <p className="text-slate-400 text-sm">Categoría {profile?.category}</p>
+                <h1 style={{ color: '#ffffff', fontSize: '28px', fontWeight: 'bold', margin: 0 }}>
+                  {displayName}
+                </h1>
+                <p style={{ color: '#94a3b8', margin: '4px 0 0 0', fontSize: '16px' }}>
+                  Categoría {profile?.category} • {profile?.city}, {profile?.province}
+                </p>
               </div>
             </div>
-            <button
+            
+            <button 
               onClick={logout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-400 transition-colors"
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '8px',
+                padding: '12px 20px',
+                color: '#ef4444',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
             >
-              Salir
+              <LogOut size={18} />
+              Cerrar Sesión
+            </button>
+          </div>
+        </header>
+
+        {/* Stats Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '16px',
+            padding: '32px',
+            textAlign: 'center'
+          }}>
+            <div style={{ color: '#60a5fa', fontSize: '48px', fontWeight: 'bold', marginBottom: '8px' }}>
+              {profile?.matches_played || 0}
+            </div>
+            <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>
+              Partidos Jugados
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+              Total en tu carrera
+            </div>
+          </div>
+          
+          <div style={{
+            background: 'rgba(34, 197, 94, 0.1)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: '16px',
+            padding: '32px',
+            textAlign: 'center'
+          }}>
+            <div style={{ color: '#4ade80', fontSize: '48px', fontWeight: 'bold', marginBottom: '8px' }}>
+              {profile?.matches_won || 0}
+            </div>
+            <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>
+              Partidos Ganados
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+              Victorias conseguidas
+            </div>
+          </div>
+          
+          <div style={{
+            background: 'rgba(168, 85, 247, 0.1)',
+            border: '1px solid rgba(168, 85, 247, 0.3)',
+            borderRadius: '16px',
+            padding: '32px',
+            textAlign: 'center'
+          }}>
+            <div style={{ color: '#a855f7', fontSize: '48px', fontWeight: 'bold', marginBottom: '8px' }}>
+              {winRate}%
+            </div>
+            <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>
+              Efectividad
+            </div>
+            <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+              Porcentaje de victorias
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          padding: '32px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          marginBottom: '32px'
+        }}>
+          <h2 style={{ color: '#ffffff', fontSize: '24px', fontWeight: '600', marginBottom: '24px' }}>
+            Acciones Rápidas
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            <Link href="/players/dashboard/reservations" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '12px',
+                padding: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}>
+                <Calendar size={24} color="#60a5fa" />
+                <div>
+                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
+                    Mis Reservas
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+                    Ver y gestionar reservas de canchas
+                  </div>
+                </div>
+              </div>
+            </Link>
+            
+            <Link href="/players/dashboard/tournaments" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'rgba(251, 146, 60, 0.1)',
+                border: '1px solid rgba(251, 146, 60, 0.3)',
+                borderRadius: '12px',
+                padding: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}>
+                <Trophy size={24} color="#fb923c" />
+                <div>
+                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
+                    Torneos
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+                    Inscribirse en competencias
+                  </div>
+                </div>
+              </div>
+            </Link>
+            
+            <Link href="/players/dashboard/stats" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'rgba(168, 85, 247, 0.1)',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                borderRadius: '12px',
+                padding: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}>
+                <BarChart3 size={24} color="#a855f7" />
+                <div>
+                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
+                    Estadísticas
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+                    Ver rendimiento detallado
+                  </div>
+                </div>
+              </div>
+            </Link>
+            
+            <Link href="/players/dashboard/profile" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '12px',
+                padding: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}>
+                <User size={24} color="#22c55e" />
+                <div>
+                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
+                    Mi Perfil
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+                    Configurar información personal
+                  </div>
+                </div>
+              </div>
+            </Link>
+            
+            <Link href="/players/dashboard/matches" style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '12px',
+                padding: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}>
+                <BookOpen size={24} color="#ef4444" />
+                <div>
+                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
+                    Historial
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+                    Ver partidos jugados
+                  </div>
+                </div>
+              </div>
+            </Link>
+            
+            <button
+              onClick={() => window.open('/', '_blank')}
+              style={{
+                background: 'rgba(107, 114, 128, 0.1)',
+                border: '1px solid rgba(107, 114, 128, 0.3)',
+                borderRadius: '12px',
+                padding: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px'
+              }}
+            >
+              <Calendar size={24} color="#6b7280" />
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
+                  Reservar Cancha
+                </div>
+                <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+                  Hacer nueva reserva en cualquier club
+                </div>
+              </div>
             </button>
           </div>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
-                <span className="text-green-400 text-lg">📅</span>
-              </div>
-              <div>
-                <p className="text-slate-400 text-sm">Reservas Totales</p>
-                <p className="text-white text-2xl font-bold">0</p>
-              </div>
+        {/* Recent Activity */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+          {/* Upcoming Reservations */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: '16px',
+            padding: '32px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '600', margin: 0 }}>
+                Próximas Reservas
+              </h3>
+              <Link href="/players/dashboard/reservations" style={{ color: '#60a5fa', fontSize: '14px', textDecoration: 'none' }}>
+                Ver todas →
+              </Link>
             </div>
-          </div>
-
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                <span className="text-blue-400 text-lg">🎾</span>
-              </div>
-              <div>
-                <p className="text-slate-400 text-sm">Partidos Jugados</p>
-                <p className="text-white text-2xl font-bold">{profile?.matches_played || 0}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                <span className="text-yellow-400 text-lg">🏆</span>
-              </div>
-              <div>
-                <p className="text-slate-400 text-sm">Partidos Ganados</p>
-                <p className="text-white text-2xl font-bold">{profile?.matches_won || 0}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                <span className="text-purple-400 text-lg">📊</span>
-              </div>
-              <div>
-                <p className="text-slate-400 text-sm">Efectividad</p>
-                <p className="text-white text-2xl font-bold">{winRate}%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 mb-8">
-          <div className="flex flex-wrap border-b border-white/10">
-            <Link href="/players/dashboard/profile" className="px-6 py-4 text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
-              Datos
-            </Link>
-            <Link href="/players/dashboard/matches" className="px-6 py-4 text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
-              Historial
-            </Link>
-            <Link href="/players/dashboard/stats" className="px-6 py-4 text-slate-300 hover:text-white hover:bg-white/5 transition-colors border-b-2 border-blue-500 text-blue-400">
-              Estadísticas
-            </Link>
-            <Link href="/players/dashboard/recategorizations" className="px-6 py-4 text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
-              Recategorizaciones
-            </Link>
-            <Link href="/players/dashboard/sanctions" className="px-6 py-4 text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
-              Sanciones
-            </Link>
-            <Link href="/players/dashboard/fiscal" className="px-6 py-4 text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
-              Fiscales
-            </Link>
-            <Link href="/players/dashboard/encounters" className="px-6 py-4 text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
-              Enfrentamientos
-            </Link>
-          </div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Quick Actions */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <h3 className="text-white text-lg font-semibold mb-4">Acciones Rápidas</h3>
-              <div className="space-y-3">
-                <Link href="/players/dashboard/reservations/new" className="block">
-                  <div className="flex items-center gap-3 p-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-lg transition-all group">
-                    <span className="text-blue-400 text-lg">📅</span>
+            
+            {reservations.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {reservations.map((reservation) => (
+                  <div key={reservation.id} style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
                     <div>
-                      <div className="text-white font-medium text-sm">Nueva Reserva</div>
-                      <div className="text-blue-400 text-xs">Reservar cancha</div>
+                      <div style={{ color: '#ffffff', fontWeight: '500', fontSize: '16px' }}>
+                        {reservation.court?.name || 'Cancha'}
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: '14px' }}>
+                        {new Date(reservation.scheduled_at).toLocaleDateString()} | {reservation.start_time}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ color: '#4ade80', fontWeight: '500' }}>
+                        ${reservation.total_price}
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                        {reservation.status === 'confirmed' ? 'Confirmada' : 'Pendiente'}
+                      </div>
                     </div>
                   </div>
-                </Link>
-
-                <Link href="/players/dashboard/tournaments" className="block">
-                  <div className="flex items-center gap-3 p-3 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 rounded-lg transition-all group">
-                    <span className="text-orange-400 text-lg">🏆</span>
-                    <div>
-                      <div className="text-white font-medium text-sm">Ver Torneos</div>
-                      <div className="text-orange-400 text-xs">Inscribirse</div>
-                    </div>
-                  </div>
-                </Link>
-
-                <Link href="/players/dashboard/profile" className="block">
-                  <div className="flex items-center gap-3 p-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-lg transition-all group">
-                    <span className="text-green-400 text-lg">👤</span>
-                    <div>
-                      <div className="text-white font-medium text-sm">Mi Perfil</div>
-                      <div className="text-green-400 text-xs">Editar datos</div>
-                    </div>
-                  </div>
-                </Link>
-
-                <Link href="/players/dashboard/stats" className="block">
-                  <div className="flex items-center gap-3 p-3 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-lg transition-all group">
-                    <span className="text-purple-400 text-lg">📊</span>
-                    <div>
-                      <div className="text-white font-medium text-sm">Estadísticas</div>
-                      <div className="text-purple-400 text-xs">Ver historial</div>
-                    </div>
-                  </div>
-                </Link>
+                ))}
               </div>
-            </div>
-
-            {/* Player Info */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <h3 className="text-white text-lg font-semibold mb-4">Mi información</h3>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                  {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px' }}>
+                <div style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '12px' }}>
+                  No tienes reservas próximas
                 </div>
-                <div>
-                  <div className="text-white font-medium">{displayName}</div>
-                  <div className="text-slate-400 text-sm">Categoría {profile?.category}</div>
+                <button
+                  onClick={() => window.open('/', '_blank')}
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.2)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    color: '#60a5fa',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Hacer una reserva
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Available Tournaments */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(16px)',
+            borderRadius: '16px',
+            padding: '32px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '600', margin: 0 }}>
+                Torneos Disponibles
+              </h3>
+              <Link href="/players/dashboard/tournaments" style={{ color: '#fb923c', fontSize: '14px', textDecoration: 'none' }}>
+                Ver todos →
+              </Link>
+            </div>
+            
+            {tournaments.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {tournaments.map((tournament) => (
+                  <div key={tournament.id} style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '8px',
+                    padding: '16px'
+                  }}>
+                    <div style={{ color: '#ffffff', fontWeight: '500', fontSize: '16px', marginBottom: '4px' }}>
+                      {tournament.name}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>
+                      Categoría: {tournament.category}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
+                      Inscripciones hasta: {new Date(tournament.registration_deadline).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px' }}>
+                <div style={{ color: '#94a3b8', fontSize: '16px' }}>
+                  No hay torneos disponibles
                 </div>
               </div>
-              
-              <div className="space-y-2 text-sm">
-                {profile?.city && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Ciudad:</span>
-                    <span className="text-white">{profile.city}</span>
-                  </div>
-                )}
-                {profile?.province && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Provincia:</span>
-                    <span className="text-white">{profile.province}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Miembro desde:</span>
-                  <span className="text-white">
-                    {new Date(profile?.created_at || '').getFullYear()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Recent Activity */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Upcoming Reservations */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white text-lg font-semibold">Próximas Reservas</h3>
-                <Link href="/players/dashboard/reservations" className="text-blue-400 text-sm hover:text-blue-300">
-                  Ver todas →
-                </Link>
-              </div>
-              
-              <div className="text-center py-8">
-                <div className="text-slate-400 text-sm">No tienes reservas próximas</div>
-                <Link href="/players/dashboard/reservations/new" className="text-blue-400 text-sm hover:text-blue-300 mt-2 inline-block">
-                  Hacer una reserva →
-                </Link>
-              </div>
-            </div>
-
-            {/* Available Tournaments */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white text-lg font-semibold">Torneos Disponibles</h3>
-                <Link href="/players/dashboard/tournaments" className="text-orange-400 text-sm hover:text-orange-300">
-                  Ver todos →
-                </Link>
-              </div>
-              
-              <div className="text-center py-8">
-                <div className="text-slate-400 text-sm">No hay torneos disponibles</div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
