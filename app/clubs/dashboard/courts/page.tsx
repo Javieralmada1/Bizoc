@@ -1,4 +1,5 @@
 'use client'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
@@ -16,6 +17,7 @@ type Court = {
 type ClubProfile = {
   id: string
   name: string
+  club_id: string
 }
 
 export default function CourtsPage() {
@@ -25,50 +27,39 @@ export default function CourtsPage() {
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingCourt, setEditingCourt] = useState<Court | null>(null)
-  
+
   const [formData, setFormData] = useState({
     name: '',
     surface_type: 'artificial_grass',
-    hourly_rate: 25
+    hourly_rate: 25,
   })
 
   const surfaceTypes = [
     { value: 'artificial_grass', label: 'Césped Artificial' },
     { value: 'cement', label: 'Cemento' },
     { value: 'clay', label: 'Polvo de Ladrillo' },
-    { value: 'indoor', label: 'Indoor' }
+    { value: 'indoor', label: 'Indoor' },
   ]
 
-  useEffect(() => {
-    checkAuthAndLoadData()
-  }, [])
+  useEffect(() => { checkAuthAndLoadData() }, [])
 
   async function checkAuthAndLoadData() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.replace('/clubs/auth/login')
-        return
-      }
+      if (!user) return router.replace('/clubs/auth/login')
 
-      // Verificar que es un club
-      const { data: clubProfile } = await supabase
+      const { data: clubProfile, error } = await supabase
         .from('club_profiles')
-        .select('id, name')
+        .select('id, name, club_id')
         .eq('id', user.id)
         .single()
 
-      if (!clubProfile) {
-        router.replace('/clubs/auth/login')
-        return
-      }
+      if (error || !clubProfile) return router.replace('/clubs/auth/login')
 
       setClub(clubProfile)
-      await loadCourts(clubProfile.id)
-      
-    } catch (error) {
-      console.error('Error checking auth:', error)
+      await loadCourts(clubProfile.club_id)
+    } catch (e) {
+      console.error('Error checking auth:', e)
       router.replace('/clubs/auth/login')
     } finally {
       setLoading(false)
@@ -85,8 +76,8 @@ export default function CourtsPage() {
 
       if (error) throw error
       setCourts(data || [])
-    } catch (error) {
-      console.error('Error loading courts:', error)
+    } catch (e) {
+      console.error('Error loading courts:', e)
     }
   }
 
@@ -94,7 +85,7 @@ export default function CourtsPage() {
     const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'hourly_rate' ? Number(value) : value
+      [name]: name === 'hourly_rate' ? Number(value) : value,
     }))
   }
 
@@ -104,42 +95,34 @@ export default function CourtsPage() {
 
     try {
       if (editingCourt) {
-        // Actualizar cancha existente
         const { error } = await supabase
           .from('courts')
           .update({
             name: formData.name,
             surface_type: formData.surface_type,
-            hourly_rate: formData.hourly_rate
+            hourly_rate: formData.hourly_rate,
           })
           .eq('id', editingCourt.id)
-
         if (error) throw error
       } else {
-        // Crear nueva cancha
         const { error } = await supabase
           .from('courts')
           .insert({
-            club_id: club.id,
+            club_id: club.club_id,
             name: formData.name,
             surface_type: formData.surface_type,
             hourly_rate: formData.hourly_rate,
-            is_active: true
+            is_active: true,
           })
-
         if (error) throw error
       }
 
-      // Recargar canchas
-      await loadCourts(club.id)
-      
-      // Resetear formulario
+      await loadCourts(club.club_id)
       setFormData({ name: '', surface_type: 'artificial_grass', hourly_rate: 25 })
       setShowAddForm(false)
       setEditingCourt(null)
-      
-    } catch (error) {
-      console.error('Error saving court:', error)
+    } catch (e) {
+      console.error('Error saving court:', e)
       alert('Error al guardar la cancha')
     }
   }
@@ -150,33 +133,22 @@ export default function CourtsPage() {
         .from('courts')
         .update({ is_active: !court.is_active })
         .eq('id', court.id)
-
       if (error) throw error
-      
-      // Actualizar estado local
-      setCourts(courts.map(c => 
-        c.id === court.id ? { ...c, is_active: !c.is_active } : c
-      ))
-    } catch (error) {
-      console.error('Error updating court status:', error)
+      setCourts(courts.map(c => (c.id === court.id ? { ...c, is_active: !c.is_active } : c)))
+    } catch (e) {
+      console.error('Error updating court status:', e)
       alert('Error al cambiar el estado de la cancha')
     }
   }
 
   async function deleteCourt(courtId: string) {
-    if (!confirm('¿Estás seguro de que quieres eliminar esta cancha?')) return
-
+    if (!confirm('¿Eliminar esta cancha?')) return
     try {
-      const { error } = await supabase
-        .from('courts')
-        .delete()
-        .eq('id', courtId)
-
+      const { error } = await supabase.from('courts').delete().eq('id', courtId)
       if (error) throw error
-      
       setCourts(courts.filter(c => c.id !== courtId))
-    } catch (error) {
-      console.error('Error deleting court:', error)
+    } catch (e) {
+      console.error('Error deleting court:', e)
       alert('Error al eliminar la cancha')
     }
   }
@@ -186,7 +158,7 @@ export default function CourtsPage() {
     setFormData({
       name: court.name,
       surface_type: court.surface_type,
-      hourly_rate: court.hourly_rate
+      hourly_rate: court.hourly_rate,
     })
     setShowAddForm(true)
   }
@@ -199,8 +171,8 @@ export default function CourtsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center">
-        <div className="text-slate-300 text-lg">Cargando canchas...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-slate-600 text-lg">Cargando canchas…</div>
       </div>
     )
   }
@@ -211,30 +183,28 @@ export default function CourtsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Gestión de Canchas</h1>
-            <p className="text-slate-400">
-              Administra las canchas de {club?.name}
-            </p>
+            <h1 className="text-3xl font-bold heading-gradient">Gestión de Canchas</h1>
+            <p className="text-slate-600">Administra las canchas de {club?.name}</p>
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all"
+            className="btn-gradient"
           >
             + Agregar Cancha
           </button>
         </div>
 
-        {/* Add/Edit Form */}
+        {/* Modal Add/Edit */}
         {showAddForm && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-700">
-              <h3 className="text-xl font-semibold text-white mb-4">
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] flex items-center justify-center p-4 z-50">
+            <div className="glass-card w-full max-w-md p-6">
+              <h3 className="text-xl font-semibold text-slate-900 mb-4">
                 {editingCourt ? 'Editar Cancha' : 'Agregar Nueva Cancha'}
               </h3>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Nombre de la Cancha
                   </label>
                   <input
@@ -243,22 +213,22 @@ export default function CourtsPage() {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    placeholder="Ej: Cancha 1"
+                    className="field-glass"
+                    placeholder="Ej: Cancha principal"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Tipo de Superficie
                   </label>
                   <select
                     name="surface_type"
                     value={formData.surface_type}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="select-glass"
                   >
-                    {surfaceTypes.map(type => (
+                    {surfaceTypes.map((type) => (
                       <option key={type.value} value={type.value}>
                         {type.label}
                       </option>
@@ -267,7 +237,7 @@ export default function CourtsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Precio por Hora ($)
                   </label>
                   <input
@@ -278,21 +248,21 @@ export default function CourtsPage() {
                     required
                     min="0"
                     step="0.01"
-                    className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="field-glass"
                   />
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-2">
                   <button
                     type="submit"
-                    className="flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all"
+                    className="btn-gradient flex-1"
                   >
                     {editingCourt ? 'Actualizar' : 'Agregar'} Cancha
                   </button>
                   <button
                     type="button"
                     onClick={cancelEdit}
-                    className="px-6 py-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                    className="btn-ghost"
                   >
                     Cancelar
                   </button>
@@ -302,81 +272,68 @@ export default function CourtsPage() {
           </div>
         )}
 
-        {/* Courts List */}
+        {/* Lista de canchas */}
         {courts.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {courts.map((court) => (
               <div
                 key={court.id}
-                className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10"
+                className="glass-card p-6"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-white">{court.name}</h3>
-                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    court.is_active 
-                      ? 'bg-green-500/20 text-green-400' 
-                      : 'bg-red-500/20 text-red-400'
-                  }`}>
+                  <h3 className="text-lg font-semibold text-slate-900">{court.name}</h3>
+                  <span className={`pill ${court.is_active ? 'pill-success' : 'pill-danger'}`}>
                     {court.is_active ? 'Activa' : 'Inactiva'}
-                  </div>
+                  </span>
                 </div>
 
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Superficie:</span>
-                    <span className="text-white">
-                      {surfaceTypes.find(t => t.value === court.surface_type)?.label}
+                <div className="space-y-2 mb-4 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Superficie:</span>
+                    <span className="text-slate-900">
+                      {surfaceTypes.find((t) => t.value === court.surface_type)?.label}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-400">Precio/hora:</span>
-                    <span className="text-white font-semibold">${court.hourly_rate}</span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Precio/hora:</span>
+                    <span className="text-slate-900 font-semibold">${court.hourly_rate}</span>
                   </div>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => startEdit(court)}
-                    className="flex-1 py-2 bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-medium"
+                    className="btn-ghost flex-1"
                   >
                     Editar
                   </button>
                   <button
                     onClick={() => toggleCourtStatus(court)}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      court.is_active
-                        ? 'bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30'
-                        : 'bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30'
-                    }`}
+                    className={`btn-ghost flex-1 ${court.is_active ? 'text-amber-700' : 'text-emerald-700'}`}
                   >
                     {court.is_active ? 'Desactivar' : 'Activar'}
                   </button>
                   <button
                     onClick={() => deleteCourt(court.id)}
-                    className="px-4 py-2 bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors text-sm font-medium"
+                    className="btn-ghost text-rose-700"
                   >
-                    🗑️
+                    Eliminar
                   </button>
+                </div>
+                {/* Agregar el nuevo botón de horarios */}
+                <div className="mt-2">
+                  <a
+                    href={`/clubs/dashboard/schedules?court=${court.id}`}
+                    className="btn-ghost w-full text-center"
+                  >
+                    Configurar horarios
+                  </a>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-6">🏟️</div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              No hay canchas registradas
-            </h3>
-            <p className="text-slate-400 mb-6">
-              Comienza agregando tu primera cancha para empezar a recibir reservas.
-            </p>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all"
-            >
-              Agregar Primera Cancha
-            </button>
-          </div>
+          <div className="text-slate-600">No hay canchas registradas aún.</div>
         )}
       </div>
     </div>

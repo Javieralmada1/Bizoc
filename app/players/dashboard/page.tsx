@@ -3,50 +3,37 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import Link from 'next/link'
-import { LogOut, Settings, Calendar, Trophy, BarChart3, User, BookOpen } from 'lucide-react'
 
-type PlayerProfile = {
+type ClubProfile = {
   id: string
-  first_name: string
-  last_name: string
-  phone: string | null
+  name: string
+  email: string
   province: string | null
   city: string | null
-  category: string
-  matches_played: number
-  matches_won: number
-  phone_verified: boolean
+  address: string | null
+  phone: string | null
   created_at: string
 }
 
-interface Tournament {
-  id: string
-  name: string
-  status: string
-  registration_deadline: string
-  start_date: string
-  category: string
-  entry_fee?: number
+type DashboardStats = {
+  totalCourts: number
+  activeCourts: number
+  todayReservations: number
+  monthRevenue: number
+  activeTournaments: number
 }
 
-interface Reservation {
-  id: string
-  scheduled_at: string
-  start_time: string
-  end_time: string
-  total_price: number
-  status: string
-  court: {
-    name: string
-  }
-}
-
-export default function PlayerDashboard() {
+export default function ClubDashboard() {
   const router = useRouter()
-  const [profile, setProfile] = useState<PlayerProfile | null>(null)
+  const [profile, setProfile] = useState<ClubProfile | null>(null)
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCourts: 0,
+    activeCourts: 0,
+    todayReservations: 0,
+    monthRevenue: 0,
+    activeTournaments: 0
+  })
   const [loading, setLoading] = useState(true)
-  const [tournaments, setTournaments] = useState<Tournament[]>([])
-  const [reservations, setReservations] = useState<Reservation[]>([])
 
   useEffect(() => {
     checkAuth()
@@ -54,520 +41,266 @@ export default function PlayerDashboard() {
 
   async function checkAuth() {
     try {
-      const { data } = await supabase.auth.getUser()
-      if (!data.user) { 
-        router.replace('/players/auth/login')
-        return 
-      }
+      const { data: { user } } = await supabase.auth.getUser()
       
-      const { data: playerP } = await supabase
-        .from('player_profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .single()
-        
-      if (!playerP) {
-        const { data: clubP } = await supabase
-          .from('club_profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .single()
-        if (clubP) router.replace('/clubs/dashboard')
-        else router.replace('/players/auth/login')
-      } else {
-        await loadProfile()
-        await loadTournaments()
-        await loadReservations(data.user.id)
+      if (!user) {
+        router.replace('/clubs/auth/login')
+        return
       }
+
+      // Verificar que es un club
+      const { data: clubProfile } = await supabase
+        .from('club_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (!clubProfile) {
+        router.replace('/clubs/auth/login')
+        return
+      }
+
+      setProfile(clubProfile)
+      await loadStats(clubProfile.id)
+      
     } catch (error) {
       console.error('Error checking auth:', error)
-      router.replace('/players/auth/login')
+      router.replace('/clubs/auth/login')
+    } finally {
+      setLoading(false)
     }
   }
 
-  async function loadProfile() {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.replace('/players/auth/login')
-      return
-    }
-    
-    const { data: profile, error } = await supabase
-      .from('player_profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (error) {
-      console.error('Error cargando perfil:', error)
-    } else {
-      setProfile(profile)
-    }
-    
-    setLoading(false)
-  }
-
-  async function loadTournaments() {
+  async function loadStats(clubId: string) {
     try {
-      const { data, error } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('status', 'registration')
-        .order('registration_deadline', { ascending: true })
-        .limit(3)
+      // Cargar estadísticas del club
+      const [courtsRes, reservationsRes, tournamentsRes] = await Promise.all([
+        supabase.from('courts').select('*').eq('club_id', clubId),
+        supabase.from('reservations').select('*').eq('club_id', clubId).gte('scheduled_at', new Date().toISOString().split('T')[0]),
+        supabase.from('tournaments').select('*').eq('club_id', clubId).eq('status', 'active')
+      ])
 
-      if (error) throw error
-      setTournaments(data || [])
+      const courts = courtsRes.data || []
+      const todayReservations = reservationsRes.data || []
+      const tournaments = tournamentsRes.data || []
+
+      setStats({
+        totalCourts: courts.length,
+        activeCourts: courts.filter(c => c.is_active).length,
+        todayReservations: todayReservations.length,
+        monthRevenue: todayReservations.reduce((sum, r) => sum + (r.total_price || 0), 0),
+        activeTournaments: tournaments.length
+      })
     } catch (error) {
-      console.error('Error loading tournaments:', error)
-    }
-  }
-
-  async function loadReservations(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('reservations')
-        .select(`
-          *,
-          court:courts(name)
-        `)
-        .eq('customer_email', userId)
-        .gte('scheduled_at', new Date().toISOString().split('T')[0])
-        .order('scheduled_at', { ascending: true })
-        .limit(3)
-
-      if (error) throw error
-      setReservations(data || [])
-    } catch (error) {
-      console.error('Error loading reservations:', error)
+      console.error('Error loading stats:', error)
     }
   }
 
   async function logout() {
     await supabase.auth.signOut()
-    router.replace('/players')
+    router.replace('/clubs')
   }
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{ color: '#cbd5e1', fontSize: '18px' }}>Cargando dashboard...</div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center">
+        <div className="text-slate-300 text-lg">Cargando dashboard...</div>
       </div>
     )
   }
 
-  const winRate = profile?.matches_played ? 
-    Math.round((profile.matches_won / profile.matches_played) * 100) : 0
-
-  const displayName = profile?.first_name && profile?.last_name 
-    ? `${profile.first_name} ${profile.last_name}`
-    : profile?.first_name || 'Jugador'
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%)',
-      padding: '24px'
-    }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Header */}
-        <header style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(16px)',
-          borderRadius: '16px',
-          padding: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          marginBottom: '32px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                background: 'linear-gradient(135deg, #3b82f6, #1e40af)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                fontSize: '24px',
-                fontWeight: 'bold'
-              }}>
-                {displayName.split(' ').map(n => n[0]).join('').toUpperCase()}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900">
+      {/* Header */}
+      <header className="bg-white/5 backdrop-blur-lg border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                <span className="text-white text-xl font-bold">🏆</span>
               </div>
               <div>
-                <h1 style={{ color: '#ffffff', fontSize: '28px', fontWeight: 'bold', margin: 0 }}>
-                  {displayName}
-                </h1>
-                <p style={{ color: '#94a3b8', margin: '4px 0 0 0', fontSize: '16px' }}>
-                  Categoría {profile?.category} • {profile?.city}, {profile?.province}
-                </p>
+                <h1 className="text-white text-xl font-semibold">{profile?.name}</h1>
+                <p className="text-slate-400 text-sm">Panel de Control</p>
               </div>
             </div>
-            
-            <button 
+            <button
               onClick={logout}
-              style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '8px',
-                padding: '12px 20px',
-                color: '#ef4444',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-400 transition-colors"
             >
-              <LogOut size={18} />
-              Cerrar Sesión
+              Salir
             </button>
           </div>
-        </header>
+        </div>
+      </header>
 
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Stats Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-          <div style={{
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: '16px',
-            padding: '32px',
-            textAlign: 'center'
-          }}>
-            <div style={{ color: '#60a5fa', fontSize: '48px', fontWeight: 'bold', marginBottom: '8px' }}>
-              {profile?.matches_played || 0}
-            </div>
-            <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>
-              Partidos Jugados
-            </div>
-            <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-              Total en tu carrera
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-blue-400 text-lg">🏟️</span>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Canchas</p>
+                <p className="text-white text-2xl font-bold">{stats.totalCourts}</p>
+              </div>
             </div>
           </div>
-          
-          <div style={{
-            background: 'rgba(34, 197, 94, 0.1)',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-            borderRadius: '16px',
-            padding: '32px',
-            textAlign: 'center'
-          }}>
-            <div style={{ color: '#4ade80', fontSize: '48px', fontWeight: 'bold', marginBottom: '8px' }}>
-              {profile?.matches_won || 0}
-            </div>
-            <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>
-              Partidos Ganados
-            </div>
-            <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-              Victorias conseguidas
+
+          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-green-400 text-lg">✅</span>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Activas</p>
+                <p className="text-white text-2xl font-bold">{stats.activeCourts}</p>
+              </div>
             </div>
           </div>
-          
-          <div style={{
-            background: 'rgba(168, 85, 247, 0.1)',
-            border: '1px solid rgba(168, 85, 247, 0.3)',
-            borderRadius: '16px',
-            padding: '32px',
-            textAlign: 'center'
-          }}>
-            <div style={{ color: '#a855f7', fontSize: '48px', fontWeight: 'bold', marginBottom: '8px' }}>
-              {winRate}%
+
+          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-purple-400 text-lg">📅</span>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Reservas Hoy</p>
+                <p className="text-white text-2xl font-bold">{stats.todayReservations}</p>
+              </div>
             </div>
-            <div style={{ color: '#ffffff', fontSize: '16px', fontWeight: '500', marginBottom: '4px' }}>
-              Efectividad
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-yellow-400 text-lg">💰</span>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Ingresos Mes</p>
+                <p className="text-white text-2xl font-bold">${stats.monthRevenue}</p>
+              </div>
             </div>
-            <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-              Porcentaje de victorias
+          </div>
+
+          <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-orange-400 text-lg">🏆</span>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Torneos</p>
+                <p className="text-white text-2xl font-bold">{stats.activeTournaments}</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(16px)',
-          borderRadius: '16px',
-          padding: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          marginBottom: '32px'
-        }}>
-          <h2 style={{ color: '#ffffff', fontSize: '24px', fontWeight: '600', marginBottom: '24px' }}>
-            Acciones Rápidas
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-            <Link href="/players/dashboard/reservations" style={{ textDecoration: 'none' }}>
-              <div style={{
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <Calendar size={24} color="#60a5fa" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Link href="/clubs/dashboard/courts" className="group">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all group-hover:scale-105">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">🏟️</span>
+                </div>
                 <div>
-                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
-                    Mis Reservas
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                    Ver y gestionar reservas de canchas
-                  </div>
+                  <h3 className="text-white text-lg font-semibold">Gestionar Canchas</h3>
+                  <p className="text-slate-400 text-sm">Agregar, editar y configurar canchas</p>
                 </div>
               </div>
-            </Link>
-            
-            <Link href="/players/dashboard/tournaments" style={{ textDecoration: 'none' }}>
-              <div style={{
-                background: 'rgba(251, 146, 60, 0.1)',
-                border: '1px solid rgba(251, 146, 60, 0.3)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <Trophy size={24} color="#fb923c" />
-                <div>
-                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
-                    Torneos
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                    Inscribirse en competencias
-                  </div>
-                </div>
+              <div className="text-blue-400 text-sm font-medium">
+                {stats.totalCourts} canchas registradas →
               </div>
-            </Link>
-            
-            <Link href="/players/dashboard/stats" style={{ textDecoration: 'none' }}>
-              <div style={{
-                background: 'rgba(168, 85, 247, 0.1)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <BarChart3 size={24} color="#a855f7" />
-                <div>
-                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
-                    Estadísticas
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                    Ver rendimiento detallado
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/players/dashboard/profile" style={{ textDecoration: 'none' }}>
-              <div style={{
-                background: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <User size={24} color="#22c55e" />
-                <div>
-                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
-                    Mi Perfil
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                    Configurar información personal
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <Link href="/players/dashboard/matches" style={{ textDecoration: 'none' }}>
-              <div style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}>
-                <BookOpen size={24} color="#ef4444" />
-                <div>
-                  <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
-                    Historial
-                  </div>
-                  <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                    Ver partidos jugados
-                  </div>
-                </div>
-              </div>
-            </Link>
-            
-            <button
-              onClick={() => window.open('/', '_blank')}
-              style={{
-                background: 'rgba(107, 114, 128, 0.1)',
-                border: '1px solid rgba(107, 114, 128, 0.3)',
-                borderRadius: '12px',
-                padding: '20px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
-              }}
-            >
-              <Calendar size={24} color="#6b7280" />
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: '500', marginBottom: '4px' }}>
-                  Reservar Cancha
-                </div>
-                <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                  Hacer nueva reserva en cualquier club
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
-          {/* Upcoming Reservations */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: '16px',
-            padding: '32px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '600', margin: 0 }}>
-                Próximas Reservas
-              </h3>
-              <Link href="/players/dashboard/reservations" style={{ color: '#60a5fa', fontSize: '14px', textDecoration: 'none' }}>
-                Ver todas →
-              </Link>
             </div>
-            
-            {reservations.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {reservations.map((reservation) => (
-                  <div key={reservation.id} style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <div>
-                      <div style={{ color: '#ffffff', fontWeight: '500', fontSize: '16px' }}>
-                        {reservation.court?.name || 'Cancha'}
-                      </div>
-                      <div style={{ color: '#94a3b8', fontSize: '14px' }}>
-                        {new Date(reservation.scheduled_at).toLocaleDateString()} | {reservation.start_time}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: '#4ade80', fontWeight: '500' }}>
-                        ${reservation.total_price}
-                      </div>
-                      <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                        {reservation.status === 'confirmed' ? 'Confirmada' : 'Pendiente'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '32px' }}>
-                <div style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '12px' }}>
-                  No tienes reservas próximas
-                </div>
-                <button
-                  onClick={() => window.open('/', '_blank')}
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.2)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
-                    color: '#60a5fa',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Hacer una reserva
-                </button>
-              </div>
-            )}
-          </div>
+          </Link>
 
-          {/* Available Tournaments */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: '16px',
-            padding: '32px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-              <h3 style={{ color: '#ffffff', fontSize: '20px', fontWeight: '600', margin: 0 }}>
-                Torneos Disponibles
-              </h3>
-              <Link href="/players/dashboard/tournaments" style={{ color: '#fb923c', fontSize: '14px', textDecoration: 'none' }}>
-                Ver todos →
-              </Link>
-            </div>
-            
-            {tournaments.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {tournaments.map((tournament) => (
-                  <div key={tournament.id} style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: '8px',
-                    padding: '16px'
-                  }}>
-                    <div style={{ color: '#ffffff', fontWeight: '500', fontSize: '16px', marginBottom: '4px' }}>
-                      {tournament.name}
-                    </div>
-                    <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px' }}>
-                      Categoría: {tournament.category}
-                    </div>
-                    <div style={{ color: '#94a3b8', fontSize: '12px' }}>
-                      Inscripciones hasta: {new Date(tournament.registration_deadline).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '32px' }}>
-                <div style={{ color: '#94a3b8', fontSize: '16px' }}>
-                  No hay torneos disponibles
+          <Link href="/clubs/dashboard/reservations" className="group">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all group-hover:scale-105">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">📅</span>
+                </div>
+                <div>
+                  <h3 className="text-white text-lg font-semibold">Reservas</h3>
+                  <p className="text-slate-400 text-sm">Ver y gestionar reservas</p>
                 </div>
               </div>
-            )}
-          </div>
+              <div className="text-purple-400 text-sm font-medium">
+                {stats.todayReservations} para hoy →
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/clubs/dashboard/tournaments" className="group">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all group-hover:scale-105">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">🏆</span>
+                </div>
+                <div>
+                  <h3 className="text-white text-lg font-semibold">Torneos</h3>
+                  <p className="text-slate-400 text-sm">Crear y gestionar torneos</p>
+                </div>
+              </div>
+              <div className="text-orange-400 text-sm font-medium">
+                {stats.activeTournaments} activos →
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/clubs/dashboard/schedules" className="group">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all group-hover:scale-105">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">⏰</span>
+                </div>
+                <div>
+                  <h3 className="text-white text-lg font-semibold">Horarios</h3>
+                  <p className="text-slate-400 text-sm">Configurar disponibilidad</p>
+                </div>
+              </div>
+              <div className="text-green-400 text-sm font-medium">
+                Gestionar horarios →
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/clubs/dashboard/cameras" className="group">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all group-hover:scale-105">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">📹</span>
+                </div>
+                <div>
+                  <h3 className="text-white text-lg font-semibold">Cámaras</h3>
+                  <p className="text-slate-400 text-sm">Gestionar sistema de grabación</p>
+                </div>
+              </div>
+              <div className="text-red-400 text-sm font-medium">
+                Configurar cámaras →
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/clubs/dashboard/analytics" className="group">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all group-hover:scale-105">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl flex items-center justify-center">
+                  <span className="text-white text-xl">📊</span>
+                </div>
+                <div>
+                  <h3 className="text-white text-lg font-semibold">Estadísticas</h3>
+                  <p className="text-slate-400 text-sm">Métricas y análisis</p>
+                </div>
+              </div>
+              <div className="text-teal-400 text-sm font-medium">
+                Ver reportes →
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
     </div>

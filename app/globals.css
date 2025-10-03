@@ -1,7 +1,4 @@
-/* @tailwind base; */
-/* @tailwind components; */
-/* @tailwind utilities; */
-
+@import "tailwindcss";
 /* ============================================
    BYZOC - GLOBALS CSS COMPLETO
    ============================================ */
@@ -17,8 +14,6 @@ html,body{
   height:100%;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   line-height: 1.6;
-  color: #ffffff;
-  background: #0f172a;
   overflow-x: hidden;
 }
 
@@ -987,8 +982,8 @@ select option {
     width: 100%;
   }
   
-  .hero-btn-primary,
-  .hero-btn-secondary {
+  .hero-btn_primary,
+  .hero-btn_secondary {
     width: 100%;
     justify-content: center;
   }
@@ -1027,8 +1022,8 @@ select option {
     width: 100%;
   }
   
-  .cta-btn-primary,
-  .cta-btn-secondary {
+  .cta-btn_primary,
+  .cta-btn_secondary {
     width: 100%;
   }
   
@@ -1124,4 +1119,181 @@ select option {
     margin: 0 !important;
     padding: 0 !important;
   }
+}
+
+/* ====== THEME LIGHT (sin cambiar HTML) ====== */
+
+/* 1) Activa todo poniendo .theme-light en el wrapper del dashboard o en <body> */
+.theme-light .dashboard-bg {
+  /* Fondo app claro (sin degradado) */
+  background: #f7f7f8;
+}
+
+/* 2) Contenedor principal: suavizar contraste y separar del aside */
+.theme-light .dash-shell {
+  color: #0f172a; /* texto principal oscuro */
+}
+
+/* 3) Sidebar claro y minimal */
+.theme-light .dash-aside {
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;     /* línea sutil */
+  box-shadow: none;                    /* sin sombras fuertes */
+}
+.theme-light .dash-aside .brand {
+  color: #111827;
+}
+.theme-light .dash-aside a {
+  color: #374151;
+  background: transparent;
+}
+.theme-light .dash-aside a.active {
+  background: #f3f4f6;                 /* resalte suave */
+  color: #111827;
+  border-left: 3px solid #6366f1;      /* indicador fino de activo */
+  padding-left: calc(var(--pl, 1rem) - 3px); /* compensa el borde */
+}
+
+/* 4) Tarjetas vítreas -> tarjetas blancas minimal */
+.theme-light .card {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04); /* sombra mínima */
+  border-radius: 18px;                   /* mismo radio que usás */
+}
+
+/* 5) Tipografías y detalles */
+.theme-light .card h1,
+.theme-light .card h2,
+.theme-light .card .stat,
+.theme-light .card .title {
+  color: #0f172a; /* títulos oscuros */
+}
+.theme-light .card p,
+.theme-light .muted,
+.theme-light .subtle {
+  color: #6b7280; /* texto secundario */
+}
+
+/* 6) Chips/píldoras o enlaces de acción dentro de cards */
+.theme-light .pill,
+.theme-light .chip {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+.theme-light .pill.active,
+.theme-light .chip.active {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+/* 7) Inputs/búsqueda (si los hay en el dashboard) */
+.theme-light input[type="text"],
+.theme-light input[type="search"],
+.theme-light select {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
+}
+.theme-light input::placeholder {
+  color: #9ca3af;
+}
+
+/* 8) Separadores muy sutiles */
+.theme-light .divider {
+  border-color: #eef2f7;
+}
+
+
+/* --- Courts Glass Theme --- */
+.heading-gradient { @apply bg-gradient-to-r from-slate-900 via-emerald-800 to-emerald-600 bg-clip-text text-transparent; }
+
+.glass-card {
+  @apply bg-white/60 backdrop-blur-md border border-white/40 rounded-2xl shadow-xl;
+  /* glow muy suave, sin perder legibilidad */
+  box-shadow: 0 10px 30px rgba(16,185,129,0.06);
+}
+
+.input-glass, .select-glass, .field-glass {
+  @apply w-full px-4 py-3 rounded-xl bg-white/70 border border-white/60 text-slate-800
+         placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500;
+}
+
+.btn-gradient {
+  @apply inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold text-white
+         bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700
+         shadow-md hover:shadow-lg transition-all;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium
+         bg-white/70 border border-white/60 text-slate-700 hover:bg-white;
+}
+
+.pill {
+  @apply px-2.5 py-1 rounded-full text-xs font-semibold;
+}
+.pill-success { @apply bg-emerald-100 text-emerald-700; }
+.pill-danger  { @apply bg-rose-100 text-rose-700; }
+.pill-warn    { @apply bg-amber-100 text-amber-700; }
+
+/* === Fix legibilidad inputs en Schedules (tema claro) === */
+.theme-light input,
+.theme-light select,
+.theme-light textarea {
+  color: #0f172a; /* slate-900 */
+}
+
+/* Nuestras utilidades glass: aseguro que ganen la especificidad */
+.field-glass,
+.select-glass {
+  color: #0f172a !important; /* por si algo lo sobreescribe */
+}
+
+/* Placeholders visibles */
+.field-glass::placeholder,
+.select-glass::placeholder,
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #64748b; /* slate-500 */
+  opacity: 1;
+}
+
+/* Options del select con fondo/contraste correctos */
+.theme-light select option {
+  color: #0f172a;
+  background: #ffffff;
+}
+
+/* Date/Time inputs (WebKit) */
+.theme-light input[type="date"]::-webkit-datetime-edit,
+.theme-light input[type="time"]::-webkit-datetime-edit {
+  color: #0f172a;
+}
+.theme-light input[type="date"]::-webkit-calendar-picker-indicator,
+.theme-light input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: none; /* evita invertir colores del icono */
+  opacity: 0.7;
+}
+.theme-light input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.theme-light input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Autofill (Chrome) suele poner texto blanco) */
+.theme-light input:-webkit-autofill,
+.theme-light textarea:-webkit-autofill,
+.theme-light select:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  transition: background-color 9999s ease-out 0s; /* evita amarillo */
+}
+
+/* Checkbox/radio con color del tema */
+.theme-light input[type="checkbox"],
+.theme-light input[type="radio"] {
+  accent-color: #10b981; /* emerald-500 */
 }

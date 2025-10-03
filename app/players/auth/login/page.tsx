@@ -27,7 +27,7 @@ export default function PlayerLoginPage() {
         .single()
       
       if (playerProfile) {
-        router.replace('//players/dashboard')
+        router.replace('/players/dashboard')
       }
     }
   }
@@ -55,7 +55,7 @@ export default function PlayerLoginPage() {
           .single()
         
         if (playerProfile) {
-          router.push('//players/dashboard')
+          router.push('/players/dashboard')
         } else {
           setMessage('Esta cuenta no pertenece a un jugador. ¿Administras un club? Ve a la sección de clubs.')
           await supabase.auth.signOut()

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import BeelupPlayer from '@/components/players/BeelupPlayer'
-import ReservationSystem from '@/components/clubs/ReservationSystem'
+import ReservationSystemImproved from '@/components/clubs/ReservationSystemImproved'
 import Link from 'next/link'
 
 // Utilidades
@@ -368,7 +368,7 @@ export default function Home() {
         )}
 
         {/* MODO: RESERVAS */}
-        {mode === 'reservas' && <ReservationSystem />}
+        {mode === 'reservas' && <ReservationSystemImproved />}
 
         {/* MODO: PARTIDOS */}
         {mode === 'partidos' && (
