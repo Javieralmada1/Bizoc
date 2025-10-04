@@ -12,23 +12,18 @@ export default function PlayerLoginPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    // Verificar si ya está logueado
     checkUser()
   }, [])
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      // Verificar si es jugador
       const { data: playerProfile } = await supabase
         .from('player_profiles')
         .select('id')
         .eq('id', user.id)
         .single()
-      
-      if (playerProfile) {
-        router.replace('/players/dashboard')
-      }
+      if (playerProfile) router.replace('/players/dashboard')
     }
   }
 
@@ -36,16 +31,10 @@ export default function PlayerLoginPage() {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
 
-      // Verificar que es un jugador
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: playerProfile } = await supabase
@@ -53,7 +42,7 @@ export default function PlayerLoginPage() {
           .select('id')
           .eq('id', user.id)
           .single()
-        
+
         if (playerProfile) {
           router.push('/players/dashboard')
         } else {
@@ -73,7 +62,6 @@ export default function PlayerLoginPage() {
       setMessage('Ingresa tu email y luego haz clic en "Recuperar Contraseña"')
       return
     }
-
     try {
       setLoading(true)
       await supabase.auth.resetPasswordForEmail(email, {
@@ -90,7 +78,6 @@ export default function PlayerLoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <Link href="/players" className="inline-flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
@@ -105,13 +92,10 @@ export default function PlayerLoginPage() {
           <p className="text-slate-400">Accede a tu perfil de jugador</p>
         </div>
 
-        {/* Form */}
         <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
-                Email
-              </label>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">Email</label>
               <input
                 id="email"
                 type="email"
@@ -124,9 +108,7 @@ export default function PlayerLoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-                Contraseña
-              </label>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
               <input
                 id="password"
                 type="password"
@@ -139,11 +121,13 @@ export default function PlayerLoginPage() {
             </div>
 
             {message && (
-              <div className={`p-3 rounded-lg text-sm ${
-                message.includes('enviamos') || message.includes('exitosa')
-                  ? 'bg-green-500/20 border border-green-500/30 text-green-400'
-                  : 'bg-red-500/20 border border-red-500/30 text-red-400'
-              }`}>
+              <div
+                className={`p-3 rounded-lg text-sm ${
+                  message.includes('enviamos') || message.includes('exitosa')
+                    ? 'bg-green-500/20 border border-green-500/30 text-green-400'
+                    : 'bg-red-500/20 border border-red-500/30 text-red-400'
+                }`}
+              >
                 {message}
               </div>
             )}
@@ -168,7 +152,6 @@ export default function PlayerLoginPage() {
           </div>
         </div>
 
-        {/* Register Link */}
         <div className="text-center mt-6">
           <p className="text-slate-400">
             ¿No tienes cuenta?{' '}
@@ -178,7 +161,6 @@ export default function PlayerLoginPage() {
           </p>
         </div>
 
-        {/* Club Link */}
         <div className="text-center mt-4">
           <Link href="/clubs" className="text-slate-500 hover:text-slate-400 text-sm">
             ¿Administras un club? Ir a la sección de clubs →

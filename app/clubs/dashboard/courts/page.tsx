@@ -171,171 +171,179 @@ export default function CourtsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-slate-600 text-lg">Cargando canchas…</div>
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="text-gray-600 text-lg">Cargando canchas…</div>
       </div>
     )
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold heading-gradient">Gestión de Canchas</h1>
-            <p className="text-slate-600">Administra las canchas de {club?.name}</p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="btn-gradient"
-          >
-            + Agregar Cancha
-          </button>
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold heading-gradient mb-2">Gestión de Canchas</h1>
+          <p className="text-gray-600">Administra las canchas de {club?.name}</p>
         </div>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="btn-gradient"
+        >
+          + Agregar Cancha
+        </button>
+      </div>
 
-        {/* Modal Add/Edit */}
-        {showAddForm && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] flex items-center justify-center p-4 z-50">
-            <div className="glass-card w-full max-w-md p-6">
-              <h3 className="text-xl font-semibold text-slate-900 mb-4">
-                {editingCourt ? 'Editar Cancha' : 'Agregar Nueva Cancha'}
-              </h3>
+      {/* Modal Add/Edit */}
+      {showAddForm && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="glass-card w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              {editingCourt ? 'Editar Cancha' : 'Agregar Nueva Cancha'}
+            </h3>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Nombre de la Cancha
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    className="field-glass"
-                    placeholder="Ej: Cancha principal"
-                  />
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre de la Cancha
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  className="field-glass"
+                  placeholder="Ej: Cancha principal"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Tipo de Superficie
-                  </label>
-                  <select
-                    name="surface_type"
-                    value={formData.surface_type}
-                    onChange={handleInputChange}
-                    className="select-glass"
-                  >
-                    {surfaceTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Superficie
+                </label>
+                <select
+                  name="surface_type"
+                  value={formData.surface_type}
+                  onChange={handleInputChange}
+                  className="select-glass"
+                >
+                  {surfaceTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Precio por Hora ($)
-                  </label>
-                  <input
-                    type="number"
-                    name="hourly_rate"
-                    value={formData.hourly_rate}
-                    onChange={handleInputChange}
-                    required
-                    min="0"
-                    step="0.01"
-                    className="field-glass"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Precio por Hora ($)
+                </label>
+                <input
+                  type="number"
+                  name="hourly_rate"
+                  value={formData.hourly_rate}
+                  onChange={handleInputChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="field-glass"
+                />
+              </div>
 
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="submit"
-                    className="btn-gradient flex-1"
-                  >
-                    {editingCourt ? 'Actualizar' : 'Agregar'} Cancha
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelEdit}
-                    className="btn-ghost"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  className="btn-gradient flex-1"
+                >
+                  {editingCourt ? 'Actualizar' : 'Agregar'} Cancha
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="btn-ghost"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Lista de canchas */}
-        {courts.length > 0 ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courts.map((court) => (
-              <div
-                key={court.id}
-                className="glass-card p-6"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-slate-900">{court.name}</h3>
-                  <span className={`pill ${court.is_active ? 'pill-success' : 'pill-danger'}`}>
-                    {court.is_active ? 'Activa' : 'Inactiva'}
+      {/* Courts Grid */}
+      {courts.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {courts.map((court) => (
+            <div key={court.id} className="glass-card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">{court.name}</h3>
+                <span className={`pill ${court.is_active ? 'pill-success' : 'pill-danger'}`}>
+                  {court.is_active ? 'Activa' : 'Inactiva'}
+                </span>
+              </div>
+
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Superficie:</span>
+                  <span className="text-gray-900">
+                    {surfaceTypes.find((t) => t.value === court.surface_type)?.label}
                   </span>
                 </div>
-
-                <div className="space-y-2 mb-4 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Superficie:</span>
-                    <span className="text-slate-900">
-                      {surfaceTypes.find((t) => t.value === court.surface_type)?.label}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Precio/hora:</span>
-                    <span className="text-slate-900 font-semibold">${court.hourly_rate}</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => startEdit(court)}
-                    className="btn-ghost flex-1"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => toggleCourtStatus(court)}
-                    className={`btn-ghost flex-1 ${court.is_active ? 'text-amber-700' : 'text-emerald-700'}`}
-                  >
-                    {court.is_active ? 'Desactivar' : 'Activar'}
-                  </button>
-                  <button
-                    onClick={() => deleteCourt(court.id)}
-                    className="btn-ghost text-rose-700"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-                {/* Agregar el nuevo botón de horarios */}
-                <div className="mt-2">
-                  <a
-                    href={`/clubs/dashboard/schedules?court=${court.id}`}
-                    className="btn-ghost w-full text-center"
-                  >
-                    Configurar horarios
-                  </a>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Precio/hora:</span>
+                  <span className="text-gray-900 font-semibold">${court.hourly_rate}</span>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-slate-600">No hay canchas registradas aún.</div>
-        )}
-      </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => startEdit(court)}
+                  className="btn-ghost flex-1 text-blue-700 hover:bg-blue-50"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => toggleCourtStatus(court)}
+                  className={`btn-ghost flex-1 ${
+                    court.is_active 
+                      ? 'text-amber-700 hover:bg-amber-50' 
+                      : 'text-emerald-700 hover:bg-emerald-50'
+                  }`}
+                >
+                  {court.is_active ? 'Desactivar' : 'Activar'}
+                </button>
+                <button
+                  onClick={() => deleteCourt(court.id)}
+                  className="btn-ghost text-rose-700 hover:bg-rose-50"
+                >
+                  Eliminar
+                </button>
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <a
+                  href={`/clubs/dashboard/schedules?court=${court.id}`}
+                  className="btn-ghost w-full text-center text-purple-700 hover:bg-purple-50"
+                >
+                  Configurar horarios
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <div className="text-5xl mb-4">🏟️</div>
+          <p className="text-gray-600">No hay canchas registradas aún.</p>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="btn-gradient mt-4"
+          >
+            Agregar Primera Cancha
+          </button>
+        </div>
+      )}
     </div>
   )
 }

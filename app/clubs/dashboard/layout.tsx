@@ -1,12 +1,15 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import Link from 'next/link'
 
 export default function ClubDashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [loading, setLoading] = useState(true)
   const [clubProfile, setClubProfile] = useState<any>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -48,43 +51,70 @@ export default function ClubDashboardLayout({ children }: { children: React.Reac
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-slate-600 text-lg">Cargando...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-600 text-lg">Cargando...</div>
       </div>
     )
   }
 
+  const navLinks = [
+    { href: '/clubs/dashboard', label: 'Inicio', icon: '🏠' },
+    { href: '/clubs/dashboard/courts', label: 'Gestionar Canchas', icon: '🏟️' },
+    { href: '/clubs/dashboard/reservations', label: 'Ver Reservas', icon: '📅' },
+    { href: '/clubs/dashboard/tournaments', label: 'Torneos', icon: '🏆' },
+    { href: '/clubs/dashboard/cameras', label: 'Sistema de Cámaras', icon: '📹' },
+    { href: '/clubs/dashboard/schedules', label: 'Configurar Horarios', icon: '⏰' },
+    { href: '/clubs/dashboard/settings', label: 'Configuración', icon: '⚙️' },
+  ]
+
   return (
     <div className="theme-light">
-      <div className="dashboard-bg">
-        <div className="dash-shell">
-          <aside className="dash-aside">
-            <div className="brand">BYZOC</div>
-            <nav className="dash-nav">
-              <a href="/clubs/dashboard" className="active">Inicio</a>
-              <a href="/clubs/dashboard/courts">Gestionar Canchas</a>
-              <a href="/clubs/dashboard/reservations">Ver Reservas</a>
-              <a href="/clubs/dashboard/tournaments">Torneos</a>
-              <a href="/clubs/dashboard/cameras">Sistema de Cámaras</a>
-              <a href="/clubs/dashboard/schedules">Configurar Horarios</a>
-              <a href="/clubs/dashboard/settings">Configuración</a>
-            </nav>
-
-            {/* Botón de salida fijo al pie de la sidebar */}
-            <div className="mt-auto pt-4">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="w-full rounded-lg px-3 py-2 text-sm font-medium border border-gray-200 hover:bg-gray-50"
+      <div className="dash-shell">
+        <aside className={`dash-aside ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+          <div className="brand hidden lg:block font-extrabold tracking-tight text-slate-900 text-xl">
+            BYZOC
+          </div>
+          
+          <nav className="dash-nav mt-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`dash-nav-link ${pathname === link.href ? 'active' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
               >
-                Cerrar sesión
-              </button>
+                <span className="mr-1 text-lg">{link.icon}</span>
+                <span>{link.label}</span>
+              </Link>
+            ))}
+          </nav>
+
+          <div className="mt-auto p-4 border-t border-gray-200">
+            <div className="mb-2">
+              <div className="text-sm font-semibold text-slate-900">{clubProfile?.name}</div>
+              <div className="text-xs text-slate-500">ID: {clubProfile?.club_id}</div>
             </div>
-          </aside>
-          <main>{children}</main>
+            <button 
+              onClick={handleLogout} 
+              className="btn w-full"
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </aside>
+
+        {/* Overlay for mobile */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-[90] lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        <div className="dash-main">
+          {children}
         </div>
       </div>
     </div>
   )
 }
-
