@@ -26,8 +26,81 @@ export default function CompactSchedules({ clubName, courts }:{
   )
 }
 
+// Utility component for a single day row
+function ScheduleRow({ row, setRows, isCopyable, copyRowToAll }: {
+  row: any; // Simplified type for immediate use
+  setRows: React.Dispatch<React.SetStateAction<any[]>>;
+  isCopyable: boolean;
+  copyRowToAll: (r: any) => void;
+}) {
+  const handleChange = (field: 'open' | 'close' | 'slot' | 'on', value: string | number | boolean) => {
+    setRows(prevRows => prevRows.map(x => 
+      x.d === row.d ? { ...x, [field]: value } : x
+    ));
+  };
+  
+  return (
+    <div className={`grid items-center gap-3 py-3 border-b border-[var(--border)] last:border-b-0 ${row.on ? 'bg-white' : 'bg-[#fafafa]'}`}>
+      
+      {/* Columna 1: Día + Toggle */}
+      <div className="flex items-center gap-3 px-3">
+        <label className={`bz-pill !text-xs !font-medium ${row.on ? 'bz-pill--accent' : 'bg-slate-100 text-slate-500'}`} style={{justifySelf:'start'}}>
+          <input
+            type="checkbox"
+            checked={row.on}
+            onChange={e => handleChange('on', e.target.checked)}
+            className="mr-2"
+          />
+          {DAYS[row.d]}
+        </label>
+      </div>
+
+      {/* Columna 2: Horarios */}
+      <div className="flex items-center gap-2">
+        <input
+          type="time"
+          disabled={!row.on}
+          value={row.open}
+          onChange={e => handleChange('open', e.target.value)}
+          className="bz-card px-2 py-1 text-[13px] w-full"
+        />
+        <span className="text-sm text-slate-500">-</span>
+        <input
+          type="time"
+          disabled={!row.on}
+          value={row.close}
+          onChange={e => handleChange('close', e.target.value)}
+          className="bz-card px-2 py-1 text-[13px] w-full"
+        />
+      </div>
+
+      {/* Columna 3: Duración */}
+      <div className="flex items-center gap-2">
+        <select
+          disabled={!row.on}
+          value={row.slot}
+          onChange={e => handleChange('slot', Number(e.target.value))}
+          className="bz-card px-2 py-1 text-[13px] w-full"
+        >
+          {DURATIONS.map(n => <option key={n} value={n}>{n} min</option>)}
+        </select>
+        {isCopyable && (
+          <button
+            disabled={!row.on || !row.open || !row.close}
+            onClick={() => copyRowToAll(row)}
+            className="bz-pill bz-pill--accent !text-xs !h-full"
+            title="Copiar a todos los días"
+          >
+            📋
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function CourtCard({ court }: { court: Court }) {
-  // Estado editable compacto (tabla)
   const initial = useMemo(() => {
     const map = new Map<number, any>()
     court.hours.forEach(h => map.set(h.weekday, h))
@@ -35,8 +108,8 @@ function CourtCard({ court }: { court: Court }) {
       const h = map.get(d)
       return {
         d,
-        open: h?.open_time ?? '',
-        close: h?.close_time ?? '',
+        open: h?.open_time ?? '08:00', // Valor por defecto
+        close: h?.close_time ?? '22:00', // Valor por defecto
         slot: h?.slot_minutes ?? 60,
         on: !!(h?.open_time && h?.close_time),
       }
@@ -70,7 +143,9 @@ function CourtCard({ court }: { court: Court }) {
           fd.append(`slot_${r.d}`, String(r.slot))
         }
       })
-      const res = await fetch('/api/schedules', { method: 'POST', body: fd })
+      
+      const res = await fetch('/clubs/dashboard/schedules/upsert', { method: 'POST', body: fd }) 
+      
       if (!res.ok) throw new Error('No se pudo guardar')
       alert('Guardado ✔')
     } catch (e:any) {
@@ -81,98 +156,63 @@ function CourtCard({ court }: { court: Court }) {
   }
 
   async function previewDay() {
-    const res = await fetch(`/api/availability?courtId=${court.id}&date=${date}`)
+    // Usamos el endpoint corregido en la pregunta anterior para obtener la disponibilidad
+    const res = await fetch(`/api/schedules?courtId=${court.id}&date=${date}`) 
     const j = await res.json()
     const slots = (j.slots ?? []).map((s:any) => ({
-      t: new Date(s.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      t: dayjs(s.start).format('HH:mm'),
       free: !!s.available
     }))
     setPreview({ label: dayjs(date).format('ddd DD MMM'), slots })
   }
 
+  const resetAll = () => {
+    setRows(Array.from({ length: 7 }, (_, d) => ({
+      d,
+      open: '08:00',
+      close: '22:00',
+      slot: 60,
+      on: false,
+    })));
+  }
+
   return (
     <details className="bz-surface p-4 rounded-2xl" open>
-      <summary className="flex items-center justify-between cursor-pointer">
+      <summary className="flex items-center justify-between cursor-pointer list-none focus:outline-none">
         <div className="text-[15px] font-semibold">{court.name}</div>
         <div className="flex items-center gap-2">
-          <button className="bz-btn" onClick={(e)=>{ e.preventDefault(); setRows(initial) }}>Reset</button>
+          <button className="bz-btn" onClick={(e)=>{ e.preventDefault(); resetAll() }}>Vaciar</button>
           <button className="bz-btn bz-btn--primary" onClick={(e)=>{ e.preventDefault(); save() }} disabled={saving}>{saving? 'Guardando…':'Guardar'}</button>
         </div>
       </summary>
 
-      <div className="mt-3 overflow-hidden rounded-2xl border border-[var(--border)]">
-        {/* Cabecera compacta */}
-        <div className="grid grid-cols-[64px,80px,1fr,1fr,110px,90px] bg-[#fafafa] text-[12px] font-semibold text-slate-600 px-3 py-2">
-          <div>Día</div>
-          <div>Estado</div>
-          <div>Apertura</div>
-          <div>Cierre</div>
-          <div>Duración</div>
-          <div>Copiar</div>
+      <div className="mt-4">
+        {/* Cabecera de la tabla */}
+        <div className="grid grid-cols-[100px,1fr,140px] text-xs font-semibold text-slate-600 px-3 py-2 border-b-2 border-[var(--border)]">
+            <div>Día/Estado</div>
+            <div>Horario (Apertura - Cierre)</div>
+            <div>Duración/Copiar</div>
         </div>
-
-        {/* Filas */}
-        <div className="divide-y divide-[var(--border)]">
+        
+        <div className="divide-y divide-[var(--border)] border border-[var(--border)] rounded-xl overflow-hidden mt-3">
           {rows.map((r, idx) => (
-            <div key={idx} className="grid grid-cols-[64px,80px,1fr,1fr,110px,90px] items-center px-3 py-2 bg-white">
-              <div className="text-[12px] text-slate-600">{DAYS[r.d]}</div>
-
-              {/* Estado */}
-              <label className={`bz-pill ${r.on ? 'bz-pill--accent' : ''}`} style={{justifySelf:'start'}}>
-                <input
-                  type="checkbox"
-                  checked={r.on}
-                  onChange={e => setRows(rows.map(x => x.d === r.d ? { ...x, on: e.target.checked } : x))}
-                  className="mr-2"
-                />
-                {r.on ? 'Abierto' : 'Cerrado'}
-              </label>
-
-              {/* Apertura / Cierre */}
-              <input
-                type="time"
-                disabled={!r.on}
-                value={r.open}
-                onChange={e => setRows(rows.map(x => x.d === r.d ? { ...x, open: e.target.value } : x))}
-                className="bz-card px-2 py-1 text-[13px] w-[110px]"
-              />
-              <input
-                type="time"
-                disabled={!r.on}
-                value={r.close}
-                onChange={e => setRows(rows.map(x => x.d === r.d ? { ...x, close: e.target.value } : x))}
-                className="bz-card px-2 py-1 text-[13px] w-[110px]"
-              />
-
-              {/* Duración */}
-              <select
-                disabled={!r.on}
-                value={r.slot}
-                onChange={e => setRows(rows.map(x => x.d === r.d ? { ...x, slot: Number(e.target.value) } : x))}
-                className="bz-card px-2 py-1 text-[13px] w-[100px]"
-              >
-                {DURATIONS.map(n => <option key={n} value={n}>{n} min</option>)}
-              </select>
-
-              {/* Copiar a todos */}
-              <button
-                disabled={!r.on}
-                onClick={() => copyRowToAll(r)}
-                className="bz-pill text-[12px]"
-              >
-                A todos
-              </button>
-            </div>
+            <ScheduleRow 
+              key={r.d} 
+              row={r} 
+              setRows={setRows} 
+              isCopyable={r.d === 0} // Solo el primer día tiene el botón de copiar para simplificar
+              copyRowToAll={copyRowToAll}
+            />
           ))}
         </div>
       </div>
 
       {/* Vista previa compacta */}
-      <div className="mt-3 grid items-start gap-2 sm:grid-cols-[220px,1fr]">
+      <div className="mt-5 grid items-start gap-3 sm:grid-cols-2">
         <div className="bz-card pad">
           <div className="text-sm font-semibold mb-1">Vista previa</div>
           <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="bz-card px-3 py-2 w-full"/>
-          <button className="bz-btn bz-btn--primary mt-2 w-full" onClick={(e)=>{e.preventDefault(); previewDay()}}>Ver</button>
+          <button className="bz-btn bz-btn--primary mt-2 w-full" onClick={(e)=>{e.preventDefault(); previewDay()}}>Ver disponibilidad</button>
         </div>
         <div className="bz-card pad">
           {preview
@@ -186,7 +226,7 @@ function CourtCard({ court }: { court: Court }) {
                   : <div className="bz-sub">Sin turnos (cerrado o fuera de horario).</div>}
               </>
             )
-            : <div className="bz-sub">Elegí fecha y presioná “Ver”.</div>}
+            : <div className="bz-sub">Elegí fecha y presioná “Ver disponibilidad”.</div>}
         </div>
       </div>
     </details>

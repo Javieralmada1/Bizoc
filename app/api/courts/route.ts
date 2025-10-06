@@ -6,7 +6,7 @@ export async function GET(req: Request) {
 
   const query = supabaseAdmin
     .from('courts')
-    .select('id,name,club_id')
+    .select('id,name,club_id,is_active,hourly_rate,surface_type') // <--- CAMPOS ADICIONALES AÑADIDOS
     .order('name', { ascending: true })
 
   if (clubId) query.eq('club_id', clubId)

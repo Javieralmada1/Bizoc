@@ -1,78 +1,135 @@
 // app/clubs/dashboard/schedules/page.tsx
 import supabaseAdmin from '@/lib/supabaseAdmin'
+import { createServerClient } from '@/lib/supabaseServer'
 import CompactSchedules from '@/components/forms/CompactSchedules'
 
-export default async function SchedulesPage() {
-  // 1) Tomar el primer club como fallback (simple y robusto)
-  const { data: firstClub, error: eClub } = await supabaseAdmin
-    .from('clubs')
-    .select('id, name')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-  if (eClub) console.error('clubs error', eClub)
+// Definición de tipos mínimos para la lógica
+interface CourtNameAndId {
+    id: string;
+    name: string;
+}
 
-  if (!firstClub) {
+interface ClubFallbackRow {
+    id: string;
+    name: string;
+}
+
+// Tipo para la consulta del club, asumiendo que el campo 'club' puede ser un array o un objeto.
+// Lo definimos como una estructura con la forma más segura para acceder a él.
+type ClubRelation = Array<{ name: string | null }> | null | { name: string | null };
+
+export default async function SchedulesPage() {
+  let activeClubId: string | null = null
+  let activeClubName: string | null = null
+
+  try {
+    const { supabase } = createServerClient() 
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: rawProfile } = await supabase
+        .from('club_profiles')
+        // La sintaxis 'club:clubs!inner(name)' crea la ambigüedad.
+        .select('club_id, club:clubs!inner(name)') 
+        .eq('id', user.id)
+        .maybeSingle()
+        
+      // CORRECCIÓN CLAVE: Acceder al club de forma segura, asumiendo que
+      // puede ser un objeto o el primer elemento de un array.
+      const clubData = (rawProfile as any)?.club; // Usamos any para eludir la inferencia
+      
+      activeClubId = rawProfile?.club_id ?? null;
+      
+      if (clubData) {
+          // Si es un array, toma el nombre del primer elemento
+          if (Array.isArray(clubData) && clubData.length > 0) {
+              activeClubName = clubData[0].name ?? null;
+          // Si no es un array, toma el nombre del objeto directamente
+          } else if (typeof clubData === 'object' && clubData.name) { 
+              activeClubName = clubData.name as string;
+          }
+      }
+    }
+  } catch (e) {
+    // fallback silencioso
+  }
+
+  // 2) Si no hay club por perfil, tomar el primero (fallback)
+  if (!activeClubId) {
+    const { data: rawData } = await supabaseAdmin
+      .from('clubs')
+      .select('id, name')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      
+    const firstClub = (rawData as ClubFallbackRow[] | null)?.[0];
+      
+    activeClubId = firstClub?.id ?? null
+    activeClubName = firstClub?.name ?? null
+  }
+
+  if (!activeClubId) {
     return (
       <div className="bz-surface p-6">
-        <h1 className="text-lg font-semibold">Horarios por cancha</h1>
-        <p className="bz-sub mt-1">No se encontró un club en tu base de datos.</p>
+        <h1 className="text-xl font-semibold">Horarios por cancha</h1>
+        <p className="bz-sub">No se encontró un club asociado a tu usuario.</p>
       </div>
     )
   }
 
-  const clubId = String(firstClub.id)
-  const clubName = String(firstClub.name)
-
-  // 2) Canchas del club
-  const { data: courts, error: eCourts } = await supabaseAdmin
-    .from('courts')
-    .select('id, name')
-    .eq('club_id', clubId)
-    .order('name')
-  if (eCourts) console.error('courts error', eCourts)
-
-  const courtIds = (courts ?? []).map(c => String(c.id))
-
-  // 3) Horarios de esas canchas (semana tipo)
-  let hours: any[] = []
-  if (courtIds.length) {
-    const { data: h, error: eH } = await supabaseAdmin
+  // 3) Traer canchas del club y sus horarios (Lógica de CompactSchedules)
+  const [{ data: courtsRes }, { data: hours }] = await Promise.all([
+    supabaseAdmin
+      .from('courts')
+      .select('id, name')
+      .eq('club_id', activeClubId)
+      .order('name'),
+    
+    supabaseAdmin
       .from('court_weekly_hours')
-      .select('*')
-      .in('court_id', courtIds)
-    if (eH) console.error('hours error', eH)
-    hours = h ?? []
-  }
+      .select('*, courts!inner(club_id)') 
+      .eq('courts.club_id', activeClubId) 
+      .then((res) => ({ data: res.data ?? [], error: res.error })),
+  ])
+  
+  const courts: CourtNameAndId[] = (courtsRes || [])
+    .filter((c: any): c is CourtNameAndId => c.id !== null && c.name !== null) 
+    .map((c) => ({
+      id: String(c.id),
+      name: c.name as string
+    }));
 
-  // 4) Mapear por cancha → payload para el componente
   const hoursByCourt = new Map<string, any[]>()
-  hours.forEach(h => {
-    const k = String(h.court_id)
-    const arr = hoursByCourt.get(k) ?? []
-    arr.push(h)
-    hoursByCourt.set(k, arr)
+  ;(hours || []).forEach((h: any) => {
+    const courtId = String(h.court_id);
+    if (courts.some(c => c.id === courtId)) { 
+      const arr = hoursByCourt.get(courtId) ?? []
+      arr.push(h)
+      hoursByCourt.set(courtId, arr)
+    }
   })
 
-  const payload = (courts ?? []).map(c => ({
-    id: String(c.id),
-    name: String(c.name),
-    hours: (hoursByCourt.get(String(c.id)) ?? []).map(h => ({
-      weekday: Number(h.weekday),
-      open_time: String(h.open_time),
-      close_time: String(h.close_time),
-      slot_minutes: Number(h.slot_minutes),
+  const payload = courts.map((c) => ({
+    id: c.id,
+    name: c.name, 
+    hours: (hoursByCourt.get(c.id) ?? []).map((h) => ({
+      weekday: h.weekday as number,
+      open_time: h.open_time as string,
+      close_time: h.close_time as string,
+      slot_minutes: h.slot_minutes as number,
     })),
   }))
+  
+  const filteredPayload = payload.filter(p => p.id && p.name);
 
   return (
     <div className="space-y-6">
       <section className="bz-surface px-6 py-5">
-        <h1 className="text-xl font-semibold">Horarios · {clubName}</h1>
+        <h1 className="text-xl font-semibold">Horarios · {activeClubName ?? 'Tu club'}</h1>
         <p className="bz-sub">Semana tipo por cancha. Días cerrados no generan turnos.</p>
       </section>
 
-      <CompactSchedules clubName={clubName} courts={payload} />
+      <CompactSchedules clubName={activeClubName ?? 'Tu club'} courts={filteredPayload} />
     </div>
   )
 }
