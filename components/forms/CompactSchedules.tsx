@@ -70,7 +70,7 @@ function CourtCard({ court }: { court: Court }) {
           fd.append(`slot_${r.d}`, String(r.slot))
         }
       })
-      const res = await fetch('/api/schedules/upsert', { method: 'POST', body: fd })
+      const res = await fetch('/api/schedules', { method: 'POST', body: fd })
       if (!res.ok) throw new Error('No se pudo guardar')
       alert('Guardado ✔')
     } catch (e:any) {
