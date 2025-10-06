@@ -278,7 +278,6 @@ const ReservationSystemImproved = () => {
 
   // Confirmar reserva
   const confirmarReserva = async () => {
-    // Validaciones
     if (!selectedDate || !selectedTime || !courtId || !clubId) {
       setError('Por favor completa todos los campos requeridos')
       return
@@ -333,7 +332,6 @@ const ReservationSystemImproved = () => {
       if (response.ok) {
         setSuccess(`¡Reserva confirmada! Referencia: ${data.booking_reference}. Te enviaremos un email de confirmación.`)
         
-        // Resetear formulario
         setSelectedDate(null)
         setSelectedTime(null)
         setFormData({
@@ -343,10 +341,8 @@ const ReservationSystemImproved = () => {
           jugadores: '2 jugadores'
         })
         
-        // Generar nueva clave
         idempotencyKeyRef.current = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         
-        // Recargar slots
         setTimeout(() => {
           if (courtId && selectedDate) {
             loadSlots(courtId, selectedDate)
@@ -379,95 +375,23 @@ const ReservationSystemImproved = () => {
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      padding: '20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      {/* Header */}
-      <div style={{
-        maxWidth: '1200px',
-        margin: '0 auto 30px',
-        background: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(10px)',
-        borderRadius: '16px',
-        padding: '20px 30px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '20px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '24px'
-          }}>
-            🎾
-          </div>
-          <div>
-            <h1 style={{
-              color: '#10b981',
-              fontSize: '28px',
-              fontWeight: '700',
-              margin: '0',
-              letterSpacing: '-0.5px'
-            }}>
-              PadelReservas
-            </h1>
-            <p style={{
-              color: '#94a3b8',
-              fontSize: '14px',
-              margin: '0'
-            }}>
-              Reserva tu cancha en segundos
+    <div className="partidos-section">
+      <div className="partidos-container" style={{ maxWidth: '1200px' }}>
+        {/* Header */}
+        <div className="partidos-header" style={{ marginBottom: '30px' }}>
+          <h2 className="partidos-title">🎾 PadelReservas</h2>
+          <p className="partidos-subtitle">Reserva tu cancha en segundos</p>
+          {lastRefresh && (
+            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '8px' }}>
+              🔄 Actualizado: {lastRefresh.toLocaleTimeString()}
             </p>
-          </div>
+          )}
         </div>
-        
-        {lastRefresh && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#94a3b8',
-            fontSize: '13px'
-          }}>
-            <span>🔄</span>
-            <span>Actualizado: {lastRefresh.toLocaleTimeString()}</span>
-          </div>
-        )}
-      </div>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         {/* Filtros de Ubicación */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
-        }}>
-          <h3 style={{
-            color: 'white',
-            fontSize: '18px',
-            fontWeight: '600',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <span>📍</span>
-            Selecciona tu ubicación
+        <div className="partidos-form-card" style={{ marginBottom: '24px' }}>
+          <h3 className="partidos-title" style={{ fontSize: '18px', marginBottom: '20px' }}>
+            📍 Selecciona tu ubicación
           </h3>
           
           <div style={{
@@ -476,30 +400,13 @@ const ReservationSystemImproved = () => {
             gap: '16px'
           }}>
             {/* Provincia */}
-            <div>
-              <label style={{
-                display: 'block',
-                color: '#e2e8f0',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '8px'
-              }}>
-                Provincia *
-              </label>
+            <div className="form-group">
+              <label className="form-label">Provincia *</label>
               <select
+                className="form-select"
                 value={province}
                 onChange={(e) => handleProvinceChange(e.target.value)}
                 disabled={loadingClubs}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '10px',
-                  color: 'white',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
               >
                 <option value="">Todas las provincias</option>
                 {provinces.map(prov => (
@@ -509,31 +416,13 @@ const ReservationSystemImproved = () => {
             </div>
 
             {/* Ciudad */}
-            <div>
-              <label style={{
-                display: 'block',
-                color: '#e2e8f0',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '8px'
-              }}>
-                Ciudad *
-              </label>
+            <div className="form-group">
+              <label className="form-label">Ciudad *</label>
               <select
+                className="form-select"
                 value={city}
                 onChange={(e) => handleCityChange(e.target.value)}
                 disabled={loadingClubs || !province}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '10px',
-                  color: 'white',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  opacity: !province ? 0.5 : 1
-                }}
               >
                 <option value="">Todas las ciudades</option>
                 {cities.map(c => (
@@ -543,31 +432,13 @@ const ReservationSystemImproved = () => {
             </div>
 
             {/* Club */}
-            <div>
-              <label style={{
-                display: 'block',
-                color: '#e2e8f0',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '8px'
-              }}>
-                Club *
-              </label>
+            <div className="form-group">
+              <label className="form-label">Club *</label>
               <select
+                className="form-select"
                 value={clubId}
                 onChange={(e) => handleClubChange(e.target.value)}
                 disabled={loadingClubs || filteredClubs.length === 0}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '10px',
-                  color: 'white',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  opacity: filteredClubs.length === 0 ? 0.5 : 1
-                }}
               >
                 <option value="">Selecciona un club</option>
                 {filteredClubs.map(club => (
@@ -579,31 +450,13 @@ const ReservationSystemImproved = () => {
             </div>
 
             {/* Cancha */}
-            <div>
-              <label style={{
-                display: 'block',
-                color: '#e2e8f0',
-                fontSize: '14px',
-                fontWeight: '500',
-                marginBottom: '8px'
-              }}>
-                Cancha *
-              </label>
+            <div className="form-group">
+              <label className="form-label">Cancha *</label>
               <select
+                className="form-select"
                 value={courtId}
                 onChange={(e) => handleCourtChange(e.target.value)}
                 disabled={!clubId || loadingCourts || courts.length === 0}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '10px',
-                  color: 'white',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  opacity: !clubId || courts.length === 0 ? 0.5 : 1
-                }}
               >
                 <option value="">Selecciona una cancha</option>
                 {courts.map(court => (
@@ -622,10 +475,10 @@ const ReservationSystemImproved = () => {
               background: 'rgba(251, 191, 36, 0.1)',
               border: '1px solid rgba(251, 191, 36, 0.3)',
               borderRadius: '8px',
-              color: '#fbbf24',
+              color: '#d97706',
               fontSize: '14px'
             }}>
-              No hay clubes disponibles en esta ubicación
+              ⚠️ No hay clubes disponibles en esta ubicación
             </div>
           )}
         </div>
@@ -639,13 +492,7 @@ const ReservationSystemImproved = () => {
             marginBottom: '24px'
           }}>
             {/* Calendario */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '16px',
-              padding: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
+            <div className="partidos-form-card">
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -655,10 +502,10 @@ const ReservationSystemImproved = () => {
                 <button
                   onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: '#1e293b',
                     padding: '8px 12px',
                     cursor: 'pointer',
                     fontSize: '18px'
@@ -667,7 +514,7 @@ const ReservationSystemImproved = () => {
                   ←
                 </button>
                 <h3 style={{
-                  color: 'white',
+                  color: '#1e293b',
                   fontSize: '18px',
                   fontWeight: '600',
                   margin: 0
@@ -677,10 +524,10 @@ const ReservationSystemImproved = () => {
                 <button
                   onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
                     borderRadius: '8px',
-                    color: 'white',
+                    color: '#1e293b',
                     padding: '8px 12px',
                     cursor: 'pointer',
                     fontSize: '18px'
@@ -698,7 +545,7 @@ const ReservationSystemImproved = () => {
               }}>
                 {dayNames.map(day => (
                   <div key={day} style={{
-                    color: '#94a3b8',
+                    color: '#64748b',
                     fontSize: '12px',
                     textAlign: 'center',
                     fontWeight: '500',
@@ -721,21 +568,23 @@ const ReservationSystemImproved = () => {
                     disabled={!day || isPast(day)}
                     style={{
                       background: day && selectedDate && selectedDate.getDate() === day && selectedDate.getMonth() === currentDate.getMonth()
-                        ? 'linear-gradient(135deg, #10b981, #059669)'
+                        ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
                         : isToday(day)
-                        ? 'rgba(16, 185, 129, 0.2)'
-                        : 'rgba(255, 255, 255, 0.05)',
+                        ? 'rgba(139, 92, 246, 0.1)'
+                        : '#ffffff',
                       border: day && selectedDate && selectedDate.getDate() === day
-                        ? '2px solid #10b981'
+                        ? '2px solid #8b5cf6'
                         : isToday(day)
-                        ? '1px solid #10b981'
-                        : '1px solid rgba(255, 255, 255, 0.1)',
+                        ? '2px solid #8b5cf6'
+                        : '1px solid #e2e8f0',
                       borderRadius: '8px',
                       padding: '12px 4px',
-                      color: day && !isPast(day) ? 'white' : '#64748b',
+                      color: day && selectedDate && selectedDate.getDate() === day 
+                        ? '#ffffff'
+                        : day && !isPast(day) ? '#1e293b' : '#cbd5e1',
                       fontSize: '14px',
                       cursor: day && !isPast(day) ? 'pointer' : 'not-allowed',
-                      opacity: !day || isPast(day) ? 0.4 : 1,
+                      opacity: !day || isPast(day) ? 0.5 : 1,
                       transition: 'all 0.2s',
                       minHeight: '44px',
                       display: 'flex',
@@ -751,25 +600,11 @@ const ReservationSystemImproved = () => {
             </div>
 
             {/* Horarios */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: '16px',
-              padding: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-              <h3 style={{
-                color: 'white',
-                fontSize: '18px',
-                fontWeight: '600',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <span>🕐 Horarios Disponibles</span>
+            <div className="partidos-form-card">
+              <h3 className="form-label" style={{ marginBottom: '16px', fontSize: '18px' }}>
+                🕐 Horarios Disponibles
                 {loadingSlots && (
-                  <span style={{ fontSize: '14px', color: '#94a3b8' }}>
+                  <span className="form-loading" style={{ marginLeft: '12px', fontSize: '14px' }}>
                     Cargando...
                   </span>
                 )}
@@ -779,7 +614,7 @@ const ReservationSystemImproved = () => {
                 <div style={{
                   textAlign: 'center',
                   padding: '40px 20px',
-                  color: '#94a3b8'
+                  color: '#64748b'
                 }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>📅</div>
                   <p>Selecciona una fecha del calendario</p>
@@ -788,7 +623,7 @@ const ReservationSystemImproved = () => {
                 <div style={{
                   textAlign: 'center',
                   padding: '40px 20px',
-                  color: '#94a3b8'
+                  color: '#64748b'
                 }}>
                   <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
                   <p>No hay horarios disponibles para esta fecha</p>
@@ -812,18 +647,18 @@ const ReservationSystemImproved = () => {
                         disabled={!slot.available}
                         style={{
                           background: isSelected
-                            ? 'linear-gradient(135deg, #10b981, #059669)'
+                            ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
                             : slot.available
-                            ? 'rgba(16, 185, 129, 0.1)'
-                            : 'rgba(239, 68, 68, 0.1)',
+                            ? '#f0fdf4'
+                            : '#fef2f2',
                           border: isSelected
-                            ? '2px solid #10b981'
+                            ? '2px solid #8b5cf6'
                             : slot.available
-                            ? '1px solid rgba(16, 185, 129, 0.3)'
-                            : '1px solid rgba(239, 68, 68, 0.3)',
+                            ? '1px solid #10b981'
+                            : '1px solid #ef4444',
                           borderRadius: '8px',
                           padding: '12px',
-                          color: slot.available ? 'white' : '#ef4444',
+                          color: isSelected ? '#ffffff' : slot.available ? '#047857' : '#dc2626',
                           fontSize: '14px',
                           cursor: slot.available ? 'pointer' : 'not-allowed',
                           opacity: slot.available ? 1 : 0.6,
@@ -834,7 +669,7 @@ const ReservationSystemImproved = () => {
                         }}
                       >
                         <div style={{ fontWeight: '600' }}>{time}</div>
-                        <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                        <div style={{ fontSize: '12px', opacity: 0.9 }}>
                           ${slot.price}
                           {slot.is_peak_hour && ' 🔥'}
                         </div>
@@ -846,19 +681,16 @@ const ReservationSystemImproved = () => {
             </div>
           </div>
         ) : (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '20px',
+          <div className="partidos-form-card" style={{
             padding: '60px 40px',
             textAlign: 'center',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
             marginBottom: '24px'
           }}>
             <div style={{ fontSize: '64px', marginBottom: '24px' }}>🎾</div>
-            <h3 style={{ color: 'white', fontSize: '24px', marginBottom: '16px', fontWeight: '600' }}>
+            <h3 style={{ color: '#1e293b', fontSize: '24px', marginBottom: '16px', fontWeight: '600' }}>
               Bienvenido a PadelReservas
             </h3>
-            <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '0' }}>
+            <p style={{ color: '#64748b', fontSize: '16px', marginBottom: '0' }}>
               Selecciona tu ubicación, club y cancha arriba para comenzar tu reserva
             </p>
           </div>
@@ -866,24 +698,9 @@ const ReservationSystemImproved = () => {
 
         {/* Formulario de Reserva */}
         {selectedDate && selectedTime && (
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(10px)',
-            borderRadius: '16px',
-            padding: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}>
-            <h3 style={{
-              color: 'white',
-              fontSize: '18px',
-              fontWeight: '600',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <span>✍️</span>
-              Completa tus datos
+          <div className="partidos-form-card">
+            <h3 className="partidos-title" style={{ fontSize: '18px', marginBottom: '20px' }}>
+              ✏️ Completa tus datos
             </h3>
 
             <div style={{
@@ -892,110 +709,45 @@ const ReservationSystemImproved = () => {
               gap: '16px',
               marginBottom: '20px'
             }}>
-              <div>
-                <label style={{
-                  display: 'block',
-                  color: '#e2e8f0',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
-                  Nombre completo *
-                </label>
+              <div className="form-group">
+                <label className="form-label">Nombre completo *</label>
                 <input
                   type="text"
+                  className="form-select"
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   placeholder="Tu nombre completo"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '10px',
-                    color: 'white',
-                    fontSize: '14px'
-                  }}
                 />
               </div>
 
-              <div>
-                <label style={{
-                  display: 'block',
-                  color: '#e2e8f0',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
-                  Email *
-                </label>
+              <div className="form-group">
+                <label className="form-label">Email *</label>
                 <input
                   type="email"
+                  className="form-select"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="tu@email.com"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '10px',
-                    color: 'white',
-                    fontSize: '14px'
-                  }}
                 />
               </div>
 
-              <div>
-                <label style={{
-                  display: 'block',
-                  color: '#e2e8f0',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
-                  Teléfono *
-                </label>
+              <div className="form-group">
+                <label className="form-label">Teléfono *</label>
                 <input
                   type="tel"
+                  className="form-select"
                   value={formData.telefono}
                   onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
                   placeholder="+54 9 11 1234-5678"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '10px',
-                    color: 'white',
-                    fontSize: '14px'
-                  }}
                 />
               </div>
 
-              <div>
-                <label style={{
-                  display: 'block',
-                  color: '#e2e8f0',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  marginBottom: '8px'
-                }}>
-                  Número de jugadores
-                </label>
+              <div className="form-group">
+                <label className="form-label">Número de jugadores</label>
                 <select
+                  className="form-select"
                   value={formData.jugadores}
                   onChange={(e) => setFormData({ ...formData, jugadores: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '10px',
-                    color: 'white',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
                 >
                   <option value="2 jugadores">2 jugadores</option>
                   <option value="3 jugadores">3 jugadores</option>
@@ -1005,28 +757,15 @@ const ReservationSystemImproved = () => {
             </div>
 
             <button
+              className="form-submit-btn"
               onClick={confirmarReserva}
               disabled={saving || !formData.nombre || !formData.email || !formData.telefono}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: saving || !formData.nombre || !formData.email || !formData.telefono
-                  ? 'rgba(100, 116, 139, 0.5)'
-                  : 'linear-gradient(135deg, #10b981, #059669)',
-                border: 'none',
-                borderRadius: '12px',
-                color: 'white',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: saving || !formData.nombre || !formData.email || !formData.telefono ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s'
-              }}
             >
               {saving ? '⏳ Procesando...' : '🎾 Confirmar Reserva'}
             </button>
 
             <p style={{
-              color: '#94a3b8',
+              color: '#64748b',
               fontSize: '13px',
               textAlign: 'center',
               marginTop: '12px',
@@ -1040,30 +779,22 @@ const ReservationSystemImproved = () => {
 
         {/* Mensajes de Error y Éxito */}
         {error && (
-          <div style={{
-            marginTop: '20px',
-            padding: '16px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '12px',
-            color: '#f87171',
-            fontSize: '14px'
-          }}>
-            ⚠️ {error}
+          <div className="partido-not-found" style={{ marginTop: '20px' }}>
+            <div className="partido-not-found-icon">⚠️</div>
+            <h3 className="partido-not-found-title">Error</h3>
+            <p className="partido-not-found-text">{error}</p>
           </div>
         )}
 
         {success && (
-          <div style={{
-            marginTop: '20px',
-            padding: '16px',
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            borderRadius: '12px',
-            color: '#10b981',
-            fontSize: '14px'
-          }}>
-            ✅ {success}
+          <div className="partido-found" style={{ marginTop: '20px' }}>
+            <div className="partido-found-header">
+              <div className="partido-found-icon">✓</div>
+              <div>
+                <h3 className="partido-found-title">¡Éxito!</h3>
+                <p className="partido-found-subtitle">{success}</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1071,11 +802,11 @@ const ReservationSystemImproved = () => {
         {(selectedDate || selectedTime) && courtId && (
           <div style={{
             marginTop: '24px',
-            background: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            background: 'rgba(16, 185, 129, 0.05)',
+            border: '2px solid rgba(16, 185, 129, 0.2)',
             borderRadius: '16px',
             padding: '20px',
-            color: '#10b981'
+            color: '#047857'
           }}>
             <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '600' }}>
               📋 Resumen de tu reserva

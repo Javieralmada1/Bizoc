@@ -129,7 +129,7 @@ export default function Home() {
   }
 
   return (
-    <>
+    <div className="theme-light">
       {/* Navegación Principal */}
       <nav className="landing-nav">
         <div className="landing-nav-container">
@@ -508,6 +508,6 @@ export default function Home() {
           </div>
         )}
       </main>
-    </>
+    </div>
   )
 }

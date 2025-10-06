@@ -3,6 +3,7 @@ import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 import { spawn } from 'node:child_process'
 import net from 'node:net'
+import dgram from 'dgram'
 
 const execAsync = promisify(exec)
 
@@ -219,4 +220,55 @@ export async function autoConfigureCamera(ip: string): Promise<{
     success: false,
     error: 'No se pudieron verificar las credenciales'
   }
+}
+
+// Descubrimiento de cámaras Dahua en la red local (UDP)
+interface DiscoveredCamera {
+  ip: string
+  mac: string
+  model?: string
+  manufacturer?: string
+}
+
+export async function discover(timeout = 3000): Promise<DiscoveredCamera[]> {
+  return new Promise((resolve, reject) => {
+    const cameras: DiscoveredCamera[] = []
+    const socket = dgram.createSocket('udp4')
+    
+    // Mensaje de descubrimiento Dahua
+    const discoveryMessage = Buffer.from(
+      'MO_I\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 
+      'binary'
+    )
+
+    socket.on('error', (err) => {
+      socket.close()
+      reject(err)
+    })
+
+    socket.on('message', (msg, rinfo) => {
+      try {
+        // Parsear respuesta básica (implementar según protocolo específico)
+        cameras.push({
+          ip: rinfo.address,
+          mac: msg.toString('hex').slice(0, 12),
+          model: 'Unknown',
+          manufacturer: 'Dahua'
+        })
+      } catch (e) {
+        console.error('Error parsing camera response:', e)
+      }
+    })
+
+    socket.bind(() => {
+      socket.setBroadcast(true)
+      socket.send(new Uint8Array(discoveryMessage), 0, discoveryMessage.length, 37810, '255.255.255.255')
+      
+      // Cerrar después del timeout
+      setTimeout(() => {
+        socket.close()
+        resolve(cameras)
+      }, timeout)
+    })
+  })
 }

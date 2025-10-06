@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { discover } from '@/lib/cameraDiscovery'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,8 +14,24 @@ function buildRtspUrl({ ip_address, username, password }: { ip_address: string; 
   return `rtsp://${user}:${pass}@${ip_address}:554/cam/realmonitor?channel=1&subtype=0`
 }
 
-// GET: lista cámaras
-export async function GET() {
+// GET: descubrir cámaras
+export async function GET(req: Request) {
+  const url = new URL(req.url)
+  const discover_param = url.searchParams.get('discover')
+
+  if (discover_param === 'true') {
+    try {
+      const discoveredCams = await discover()
+      return NextResponse.json({ ok: true, cameras: discoveredCams })
+    } catch (e: any) {
+      return NextResponse.json(
+        { ok: false, error: e.message ?? 'discovery failed' },
+        { status: 500 }
+      )
+    }
+  }
+
+  // Código existente para listar cámaras
   const { data, error } = await supabase
     .from('cameras')
     .select('id, court_id, name, ip_address, username, model, status, rtsp_url')

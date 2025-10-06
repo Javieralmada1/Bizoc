@@ -1,18 +1,19 @@
 @import "tailwindcss";
+
 /* ============================================
-   BYZOC - GLOBALS CSS COMPLETO
+   BYZOC - GLOBALS CSS OPTIMIZADO
    ============================================ */
 
 /* ====== Reset & Base Styles ====== */
-*,*::before,*::after{
-  box-sizing:border-box;
+*, *::before, *::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html,body{
-  height:100%;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+html, body {
+  height: 100%;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.6;
   overflow-x: hidden;
 }
@@ -25,31 +26,9 @@ html,body{
   --byzoc-purple: #8b5cf6;
   
   --byzoc-bg-main: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #16a085 75%, #0f172a 100%);
-  --byzoc-bg-purple: linear-gradient(135deg, #0f172a 0%, #7c3aed 50%, #0f172a 100%);
-  --byzoc-bg-card: rgba(255, 255, 255, 0.05);
-  --byzoc-bg-card-hover: rgba(255, 255, 255, 0.08);
-  
-  --byzoc-btn-primary: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  --byzoc-btn-secondary: linear-gradient(135deg, #16a085, #3b82f6);
-  
-  --byzoc-glass: rgba(255, 255, 255, 0.1);
-  --byzoc-glass-border: rgba(255, 255, 255, 0.2);
-  --byzoc-backdrop-blur: blur(20px);
-  
-  --byzoc-text-primary: #ffffff;
-  --byzoc-text-secondary: #cbd5e1;
-  --byzoc-text-muted: #94a3b8;
-  --byzoc-text-disabled: #64748b;
-  
   --byzoc-success: #10b981;
   --byzoc-warning: #f59e0b;
   --byzoc-error: #ef4444;
-  --byzoc-info: #3b82f6;
-  
-  --mobile-padding: 16px;
-  --mobile-nav-height: 60px;
-  --tablet-padding: 24px;
-  --desktop-padding: 32px;
 }
 
 /* ====== Animations ====== */
@@ -58,16 +37,14 @@ html,body{
   50% { transform: translateY(-30px) scale(1.1); opacity: 0.4; }
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-@keyframes pulse-selected {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
-}
-
-/* ====== LANDING PAGE STYLES ====== */
+/* ============================================
+   LANDING PAGE STYLES (TEMA CLARO)
+   ============================================ */
 
 /* Navegación Landing */
 .landing-nav {
@@ -160,18 +137,10 @@ html,body{
   color: #3b82f6;
 }
 
-.landing-nav-btn.admin:hover {
-  background: rgba(59, 130, 246, 0.2);
-}
-
 .landing-nav-btn.player {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: #10b981;
-}
-
-.landing-nav-btn.player:hover {
-  background: rgba(16, 185, 129, 0.2);
 }
 
 .landing-mobile-toggle {
@@ -284,10 +253,6 @@ html,body{
   margin-bottom: 24px;
 }
 
-.hero-badge-icon {
-  font-size: 16px;
-}
-
 .hero-title {
   font-size: 56px;
   font-weight: 800;
@@ -361,10 +326,6 @@ html,body{
   display: flex;
   align-items: center;
   gap: 48px;
-}
-
-.hero-stat {
-  text-align: center;
 }
 
 .hero-stat-value {
@@ -640,6 +601,11 @@ html,body{
   cursor: not-allowed;
 }
 
+.form-select option {
+  background: #ffffff;
+  color: #1e293b;
+}
+
 .form-loading {
   padding: 12px 16px;
   background: rgba(139, 92, 246, 0.05);
@@ -752,7 +718,9 @@ html,body{
   color: #64748b;
 }
 
-/* ====== DASHBOARD STYLES ====== */
+/* ============================================
+   DASHBOARD STYLES (TEMA OSCURO)
+   ============================================ */
 
 .dashboard-bg {
   background: var(--byzoc-bg-main);
@@ -787,6 +755,22 @@ html,body{
   animation: byzoc-float 10s infinite ease-in-out 3s;
 }
 
+/* Asegurar textos blancos en dashboard oscuro */
+.dashboard-bg,
+.dashboard-bg * {
+  color: #ffffff;
+}
+
+.dashboard-bg h1,
+.dashboard-bg h2,
+.dashboard-bg h3 {
+  color: #ffffff !important;
+}
+
+.dashboard-bg p {
+  color: #cbd5e1;
+}
+
 .dash-shell {
   min-height: 100vh;
   display: flex;
@@ -794,616 +778,37 @@ html,body{
   overflow: hidden;
 }
 
-.dash-aside {
-  width: 280px;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(22, 160, 133, 0.1);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  z-index: 100;
-  overflow-y: auto;
-}
-
-.dash-shell main {
-  flex: 1;
-  margin-left: 280px;
-  padding: 32px;
-  display: block;
-  position: relative;
-  z-index: 10;
-  overflow-y: auto;
-  min-height: 100vh;
-  background: transparent;
-}
-
-.brand {
-  padding: 24px 20px;
-  color: #fff;
-  font-weight: 800;
-  font-size: 24px;
-  letter-spacing: 0.3px;
-  background: linear-gradient(135deg, #16a085, #3b82f6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  border-bottom: 1px solid rgba(22, 160, 133, 0.1);
-}
-
-.dash-nav {
-  display: grid;
-  gap: 8px;
-  padding: 16px 12px;
-}
-
-.dash-nav a {
-  padding: 16px 20px;
-  border-radius: 12px;
-  color: #cbd5e1;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 15px;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.dash-nav a:hover {
-  background: rgba(22, 160, 133, 0.1);
-  color: #16a085;
-  border-color: rgba(22, 160, 133, 0.2);
-  transform: translateX(4px);
-}
-
-.dash-nav a:focus,
-.dash-nav a.active {
-  background: linear-gradient(135deg, rgba(22, 160, 133, 0.2), rgba(59, 130, 246, 0.1));
-  color: #16a085;
-  border-color: rgba(22, 160, 133, 0.3);
-  transform: translateX(4px);
-  outline: none;
-}
-
-.card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 32px;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(22, 160, 133, 0.1);
-  border-color: rgba(22, 160, 133, 0.2);
-}
-
-/* Forms */
-.input, select, input[type="text"], input[type="number"], input[type="datetime-local"], input[type="time"], input[type="date"], input[type="email"], input[type="password"], input[type="tel"], textarea {
-  padding: 12px 16px !important;
-  border-radius: 8px !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: #fff !important;
-  outline: none !important;
-  transition: all 0.2s ease !important;
-  font-size: 16px !important;
-  width: 100%;
-}
-
-.input:focus, select:focus, input:focus, textarea:focus {
-  border-color: #16a085 !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1) !important;
-}
-
-.input::placeholder, input::placeholder, textarea::placeholder {
-  color: #94a3b8 !important;
-}
-
-select option {
-  background: #1f2937 !important;
-  color: white !important;
-}
-
-/* Buttons */
-.btn-primary, button[class*="btn-primary"] {
-  background: linear-gradient(135deg, #16a085, #3b82f6) !important;
-  color: white !important;
-  border: none !important;
-  padding: 12px 20px !important;
-  border-radius: 8px !important;
-  cursor: pointer !important;
-  font-weight: 600 !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(22, 160, 133, 0.3) !important;
-}
-
-.btn-primary:hover, button[class*="btn-primary"]:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 8px 25px rgba(22, 160, 133, 0.4) !important;
-}
-
-/* ====== RESPONSIVE DESIGN ====== */
-
-@media (max-width: 1024px) {
-  .hero-section {
-    flex-direction: column;
-    text-align: center;
-    padding: 40px 20px;
-  }
-  
-  .hero-content {
-    align-items: center;
-  }
-  
-  .hero-subtitle {
-    max-width: 100%;
-  }
-  
-  .hero-actions {
-    justify-content: center;
-  }
-  
-  .hero-stats {
-    justify-content: center;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Landing Styles */
-  .landing-brand-text span {
-    display: none;
-  }
-  
-  .hero-section {
-    min-height: auto;
-    padding: 40px 16px;
-  }
-  
-  .hero-title {
-    font-size: 32px;
-  }
-  
-  .hero-subtitle {
-    font-size: 16px;
-  }
-  
-  .hero-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .hero-btn_primary,
-  .hero-btn_secondary {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .hero-stats {
-    flex-wrap: wrap;
-    gap: 24px;
-  }
-  
-  .hero-card {
-    max-width: 100%;
-  }
-  
-  .features-title {
-    font-size: 28px;
-  }
-  
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .cta-card {
-    padding: 40px 24px;
-  }
-  
-  .cta-title {
-    font-size: 28px;
-  }
-  
-  .cta-subtitle {
-    font-size: 16px;
-  }
-  
-  .cta-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .cta-btn_primary,
-  .cta-btn_secondary {
-    width: 100%;
-  }
-  
-  /* Dashboard Mobile */
-  .dash-shell {
-    flex-direction: column;
-  }
-  
-  .dash-aside {
-    width: 100%;
-    height: auto;
-    position: relative;
-    order: 2;
-    border-right: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 16px;
-  }
-  
-  .dash-shell main {
-    margin-left: 0;
-    padding: 16px;
-    order: 1;
-  }
-  
-  .dash-nav {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  }
-  
-  .dash-nav a {
-    padding: 12px 8px;
-    text-align: center;
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .hero-title {
-    font-size: 28px;
-  }
-  
-  .hero-badge {
-    font-size: 12px;
-    padding: 6px 12px;
-  }
-  
-  .features-title {
-    font-size: 24px;
-  }
-  
-  .cta-title {
-    font-size: 24px;
-  }
-}
-
-/* ====== Scrollbar Styling ====== */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.5);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.7);
-}
-
-/* ====== Accessibility ====== */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ====== Print Styles ====== */
-@media print {
-  .landing-nav,
-  .dash-aside,
-  .btn,
-  button {
-    display: none !important;
-  }
-  
-  .dash-shell main {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-}
-
-/* ====== THEME LIGHT (sin cambiar HTML) ====== */
-
-/* 1) Activa todo poniendo .theme-light en el wrapper del dashboard o en <body> */
-.theme-light .dashboard-bg {
-  /* Fondo app claro (sin degradado) */
-  background: #f7f7f8;
-}
-
-/* 2) Contenedor principal: suavizar contraste y separar del aside */
-.theme-light .dash-shell {
-  color: #0f172a; /* texto principal oscuro */
-}
-
-/* 3) Sidebar claro y minimal */
-.theme-light .dash-aside {
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;     /* línea sutil */
-  box-shadow: none;                    /* sin sombras fuertes */
-}
-.theme-light .dash-aside .brand {
-  color: #111827;
-}
-.theme-light .dash-aside a {
-  color: #374151;
-  background: transparent;
-}
-.theme-light .dash-aside a.active {
-  background: #f3f4f6;                 /* resalte suave */
-  color: #111827;
-  border-left: 3px solid #6366f1;      /* indicador fino de activo */
-  padding-left: calc(var(--pl, 1rem) - 3px); /* compensa el borde */
-}
-
-/* 4) Tarjetas vítreas -> tarjetas blancas minimal */
-.theme-light .card {
-  background: #ffffff !important;
-  border: 1px solid #e5e7eb !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,.04); /* sombra mínima */
-  border-radius: 18px;                   /* mismo radio que usás */
-}
-
-/* 5) Tipografías y detalles */
-.theme-light .card h1,
-.theme-light .card h2,
-.theme-light .card .stat,
-.theme-light .card .title {
-  color: #0f172a; /* títulos oscuros */
-}
-.theme-light .card p,
-.theme-light .muted,
-.theme-light .subtle {
-  color: #6b7280; /* texto secundario */
-}
-
-/* 6) Chips/píldoras o enlaces de acción dentro de cards */
-.theme-light .pill,
-.theme-light .chip {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  color: #374151;
-}
-.theme-light .pill.active,
-.theme-light .chip.active {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-/* 7) Inputs/búsqueda (si los hay en el dashboard) */
-.theme-light input[type="text"],
-.theme-light input[type="search"],
-.theme-light select {
-  background: #ffffff;
-  color: #111827;
-  border: 1px solid #e5e7eb;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
-}
-.theme-light input::placeholder {
-  color: #9ca3af;
-}
-
-/* 8) Separadores muy sutiles */
-.theme-light .divider {
-  border-color: #eef2f7;
-}
-
-
-/* --- Courts Glass Theme --- */
-.heading-gradient {
-  background-image: linear-gradient(to right, #0f172a, #065f46, #059669);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
-}
-
-.glass-card {
-  background-color: rgba(255,255,255,0.6);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.4);
-  border-radius: 1rem;
-  box-shadow: 0 10px 30px rgba(16,185,129,0.06), 0 20px 40px rgba(0,0,0,0.1);
-}
-
-.input-glass, .select-glass, .field-glass {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  background-color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.6);
-  color: #1e293b;
-  outline: none;
-  transition: box-shadow 0.2s;
-}
-
-.input-glass::placeholder,
-.select-glass::placeholder,
-.field-glass::placeholder {
-  color: #64748b;
-  opacity: 1;
-}
-
-.input-glass:focus,
-.select-glass:focus,
-.field-glass:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #10b981;
-}
-
-.btn-gradient {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding-left: 1.25rem;
-  padding-right: 1.25rem;
-  padding-top: 0.625rem;
-  padding-bottom: 0.625rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  color: #fff;
-  background-image: linear-gradient(to right, #10b981, #059669);
-  box-shadow: 0 4px 12px rgba(16,185,129,0.2);
-  transition: all 0.2s;
-}
-.btn-gradient:hover {
-  background-image: linear-gradient(to right, #059669, #047857);
-  box-shadow: 0 8px 24px rgba(16,185,129,0.3);
-}
-
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-radius: 0.75rem;
-  font-weight: 500;
-  background-color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.6);
-  color: #334155;
-  transition: background 0.2s;
-}
-.btn-ghost:hover {
-  background-color: #fff;
-}
-
-.pill {
-  padding-left: 0.625rem;
-  padding-right: 0.625rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.pill-success {
-  background-color: #d1fae5; /* emerald-100 */
-  color: #047857;           /* emerald-700 */
-}
-.pill-danger {
-  background-color: #fee2e2; /* rose-100 */
-  color: #be123c;            /* rose-700 */
-}
-.pill-warn {
-  background-color: #fef3c7; /* amber-100 */
-  color: #b45309;            /* amber-700 */
-}
-
-/* === Fix legibilidad inputs en Schedules (tema claro) === */
-.theme-light input,
-.theme-light select,
-.theme-light textarea {
-  color: #0f172a; /* slate-900 */
-}
-
-/* Nuestras utilidades glass: aseguro que ganen la especificidad */
-.field-glass,
-.select-glass {
-  color: #0f172a !important; /* por si algo lo sobreescribe */
-}
-
-/* Placeholders visibles */
-.field-glass::placeholder,
-.select-glass::placeholder,
-.theme-light input::placeholder,
-.theme-light textarea::placeholder {
-  color: #64748b; /* slate-500 */
-  opacity: 1;
-}
-
-/* Options del select con fondo/contraste correctos */
-.theme-light select option {
-  color: #0f172a;
-  background: #ffffff;
-}
-
-/* Date/Time inputs (WebKit) */
-.theme-light input[type="date"]::-webkit-datetime-edit,
-.theme-light input[type="time"]::-webkit-datetime-edit {
-  color: #0f172a;
-}
-.theme-light input[type="date"]::-webkit-calendar-picker-indicator,
-.theme-light input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: none; /* evita invertir colores del icono */
-  opacity: 0.7;
-}
-.theme-light input[type="date"]::-webkit-calendar-picker-indicator:hover,
-.theme-light input[type="time"]::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
-}
-
-/* Autofill (Chrome) suele poner texto blanco) */
-.theme-light input:-webkit-autofill,
-.theme-light textarea:-webkit-autofill,
-.theme-light select:-webkit-autofill {
-  -webkit-text-fill-color: #0f172a !important;
-  transition: background-color 9999s ease-out 0s; /* evita amarillo */
-}
-
-/* Checkbox/radio con color del tema */
-.theme-light input[type="checkbox"],
-.theme-light input[type="radio"] {
-  accent-color: #10b981; /* emerald-500 */
-}
-
-/* ====================================================================
-   ESTILOS CORREGIDOS PARA EL DASHBOARD DE BYZOC
-   ==================================================================== */
-
-.dash-aside {
-  width: 280px;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(22, 160, 133, 0.1);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100vh;
-  z-index: 100;
-  overflow-y: auto;
-  transition: transform 0.3s ease;
-}
-
+/* Dashboard Layout */
 .dash-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
 }
 
-.dash-shell main {
-  flex: 1;
-  margin-left: 280px;
-  padding: 32px;
-  display: block;
-  position: relative;
-  z-index: 10;
-  min-height: 100vh;
-  background: transparent;
+@media (min-width: 1024px) {
+  .dash-shell {
+    grid-template-columns: 260px 1fr;
+  }
+}
+
+.dash-aside {
+  height: max-content;
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  background-color: rgba(241, 245, 249, 0.6);
+  padding: 0.75rem;
+  backdrop-filter: blur(8px);
+}
+
+@media (min-width: 1024px) {
+  .dash-aside {
+    position: sticky;
+    top: 72px;
+  }
+}
+
+.dash-main {
+  padding-bottom: 3rem;
 }
 
 .brand {
@@ -1467,11 +872,165 @@ select option {
   flex-shrink: 0;
 }
 
-.dash-user .text-slate-400 {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.card {
+  border-radius: 1rem; /* rounded-2xl */
+  border: 1px solid #e5e7eb; /* border */
+  background: #ffffff; /* bg-white */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 32px;
+  backdrop-filter: blur(20px);
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
+
+.card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(22, 160, 133, 0.1);
+  border-color: rgba(22, 160, 133, 0.2);
+}
+
+/* Forms dashboard oscuro */
+.input, select, input[type="text"], input[type="number"], input[type="datetime-local"], 
+input[type="time"], input[type="date"], input[type="email"], input[type="password"], 
+input[type="tel"], textarea {
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #fff !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+  font-size: 16px !important;
+  width: 100%;
+}
+
+.input:focus, select:focus, input:focus, textarea:focus {
+  border-color: #16a085 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.1) !important;
+}
+
+.input::placeholder, input::placeholder, textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+select option {
+  background: #1f2937 !important;
+  color: white !important;
+}
+
+/* Buttons */
+.btn-primary, button[class*="btn-primary"] {
+  background: linear-gradient(135deg, #16a085, #3b82f6) !important;
+  color: white !important;
+  border: none !important;
+  padding: 12px 20px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(22, 160, 133, 0.3) !important;
+}
+
+.btn-primary:hover, button[class*="btn-primary"]:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 25px rgba(22, 160, 133, 0.4) !important;
+}
+
+/* ============================================
+   THEME LIGHT - SOBRESCRITURA PARA LANDING
+   ============================================ */
+
+/* CRÍTICO: Sobrescribir estilos oscuros cuando está en .theme-light */
+.theme-light .input,
+.theme-light select, 
+.theme-light input[type="text"],
+.theme-light input[type="number"],
+.theme-light input[type="datetime-local"],
+.theme-light input[type="time"],
+.theme-light input[type="date"],
+.theme-light input[type="email"],
+.theme-light input[type="password"],
+.theme-light input[type="tel"],
+.theme-light textarea,
+.theme-light .form-select {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 2px solid #e2e8f0 !important;
+}
+
+.theme-light select option,
+.theme-light .form-select option {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+
+.theme-light .input::placeholder,
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.theme-light .input:focus,
+.theme-light select:focus,
+.theme-light input:focus,
+.theme-light textarea:focus,
+.theme-light .form-select:focus {
+  border-color: #8b5cf6 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1) !important;
+}
+
+/* Autofill */
+.theme-light input:-webkit-autofill,
+.theme-light textarea:-webkit-autofill,
+.theme-light select:-webkit-autofill {
+  -webkit-text-fill-color: #1e293b !important;
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  box-shadow: 0 0 0 1000px #fff inset !important;
+}
+
+/* Dashboard claro (para clubs dashboard con theme-light) */
+.theme-light .dashboard-bg {
+  background: #f8fafc;
+}
+
+.theme-light .dash-shell {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.theme-light .dash-aside {
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+}
+
+.theme-light .dash-nav-link {
+  color: #334155;
+}
+
+.theme-light .dash-nav-link:hover {
+  background: #f1f5f9;
+}
+
+.theme-light .dash-nav-link.active {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.theme-light .card {
+  background: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
 
 @media (max-width: 1023px) {
   .dash-aside {
@@ -1490,37 +1049,53 @@ select option {
   }
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  .dash-shell main {
-    padding: 70px 28px 28px 28px;
-  }
-}
-
 @media (min-width: 1024px) {
   .dash-aside {
     transform: translateX(0);
   }
+}
+
+@media (max-width: 1024px) {
+  .hero-section {
+    flex-direction: column;
+    text-align: center;
+    padding: 40px 20px;
+  }
   
-  .lg\:hidden {
-    display: none;
+  .hero-actions {
+    justify-content: center;
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .hero-btn-primary,
+  .hero-btn-secondary {
+    width: 100%;
   }
 }
 
-.card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: 32px;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-4px);
-  box-shadow: 0 20px 40px rgba(22, 160, 133, 0.1);
-  border-color: rgba(22, 160, 133, 0.2);
+@media (max-width: 768px) {
+  .landing-brand-text span {
+    display: none;
+  }
+  
+  .hero-title {
+    font-size: 32px;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .cta-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .cta-btn-primary,
+  .cta-btn-secondary {
+    width: 100%;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1529,361 +1104,239 @@ select option {
   }
 }
 
-.dash-nav-link:focus-visible,
-button:focus-visible {
-  outline: 2px solid #16a085;
-  outline-offset: 2px;
+/* ============================================
+   SCROLLBAR & ACCESSIBILITY
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-.dash-aside::-webkit-scrollbar {
-  width: 6px;
-}
-
-.dash-aside::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
 }
 
-.dash-aside::-webkit-scrollbar-thumb {
-  background: rgba(22, 160, 133, 0.3);
-  border-radius: 3px;
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 4px;
 }
 
-.dash-aside::-webkit-scrollbar-thumb:hover {
-  background: rgba(22, 160, 133, 0.5);
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
 }
 
-@keyframes slideInFromLeft {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-.space-y-8 > * + * {
-  margin-top: 2rem;
+@media print {
+  .landing-nav,
+  .dash-aside,
+  .btn,
+  button {
+    display: none !important;
+  }
 }
-/* ====== CORRECCIÓN COLORES DASHBOARD OSCURO ====== */
+/* —— Reset fino para que no interfiera con Tailwind —— */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+img, svg, video { display:block; max-width:100%; }
 
-/* Asegurar que todos los textos en dashboard sean blancos por defecto */
-.dashboard-bg,
-.dashboard-bg * {
-  color: #ffffff;
+/* Neutralizar estilos del navegador / libs sobre summary/details, buttons, inputs */
+details, summary { list-style: none; }
+summary::-webkit-details-marker { display:none; }
+button { background: transparent; border: none; padding: 0; }
+input, select, textarea, button { font: inherit; color: inherit; }
+
+/* —— Tokens suaves (puedes ajustar tonos) —— */
+:root{
+  --bg: #f8fafc;           /* slate-50 */
+  --card: #ffffff;
+  --border: #e5e7eb;       /* slate-200 */
+  --text: #0f172a;         /* slate-900 */
+  --muted: #64748b;        /* slate-500/600 */
 }
+body { background: var(--bg); color: var(--text); }
 
-/* Títulos siempre blancos en dashboard */
-.dashboard-bg h1,
-.dashboard-bg h2,
-.dashboard-bg h3,
-.dashboard-bg h4,
-.dashboard-bg h5,
-.dashboard-bg h6,
-.dashboard-bg .card h1,
-.dashboard-bg .card h2,
-.dashboard-bg .card h3 {
-  color: #ffffff !important;
-}
-
-/* Textos secundarios en slate */
-.dashboard-bg p,
-.dashboard-bg .text-slate-300,
-.dashboard-bg .text-slate-400 {
-  color: #cbd5e1;
-}
-
-/* Textos terciarios más suaves */
-.dashboard-bg .text-slate-500 {
-  color: #94a3b8;
-}
-/* ===========================
-   BYZOC — DASHBOARD THEME
-   =========================== */
-
-/* Fondo general del dashboard (claro, con leve grano) */
-.theme-light .dashboard-bg {
-  --bg: #f7f8fb;
-  --panel: #ffffff;
-  --text: #0f172a;
-  --muted: #64748b;
-  --border: rgba(15, 23, 42, 0.08);
-  --ring: rgba(124, 58, 237, 0.25);
-  --primary: #7c3aed;           /* violeta BYZOC */
-  --primary-2: #8b5cf6;         /* variante */
-  --accent: #16a085;            /* esmeralda BYZOC */
-  background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,.08), transparent 60%),
-    radial-gradient(800px 400px at 90% 0%, rgba(22,160,133,.06), transparent 55%),
-    var(--bg);
-  min-height: 100vh;
-  color: var(--text);
-}
-
-/* Contenedor del layout (sidebar + main) */
+/* —— Shell del dashboard —— */
 .dash-shell{
   display:grid;
-  grid-template-columns: 260px 1fr;
-  gap: 0;
-  min-height: 100vh;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;             /* 24px */
 }
-@media (max-width: 1024px){
-  .dash-shell{ grid-template-columns: 1fr; }
+@media (min-width: 1024px){
+  .dash-shell{ grid-template-columns: 260px 1fr; }
 }
-
-/* Sidebar */
 .dash-aside{
-  position: sticky;
-  top: 0;
-  align-self: start;
-  height: 100vh;
-  background: var(--panel);
-  border-right: 1px solid var(--border);
-  padding: 20px 16px;
-  display:flex; flex-direction:column;
-  z-index: 100;
+  border:1px solid var(--border);
+  background: rgba(248,250,252,.7);
+  backdrop-filter: blur(6px);
+  border-radius: 1rem;     /* 16px */
+  padding: .75rem;         /* 12px */
+  position: sticky; top: 72px;
 }
-.dash-aside .brand{
-  font-weight: 800; letter-spacing:.5px; font-size: 18px;
-  background: linear-gradient(135deg, var(--primary-2), var(--primary));
-  -webkit-background-clip: text; background-clip:text; -webkit-text-fill-color:transparent;
-  margin: 4px 4px 16px;
-}
-.dash-nav{
-  display:flex; flex-direction:column; gap: 4px; margin-top:8px;
-}
+.dash-aside.mobile-open{ display:block; }
+.dash-main{ padding-bottom: 4rem; }
+
+/* —— Navegación —— */
+.dash-nav{ display:grid; gap: .25rem; }
 .dash-nav-link{
-  display:flex; align-items:center; gap:10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  color: var(--muted);
-  font-weight: 600; text-decoration:none;
-  transition: background .2s ease, color .2s ease, transform .08s ease;
+  display:flex; align-items:center; gap:.5rem;
+  padding:.5rem .75rem; border-radius:.75rem; font-size:.9rem;
+  color:#475569; /* slate-600 */
 }
-.dash-nav-link:hover{ background: rgba(124,58,237,.08); color: var(--primary); transform: translateY(-1px); }
-.dash-nav-link.active{ background: linear-gradient(135deg, rgba(124,58,237,.12), rgba(139,92,246,.12)); color: var(--primary); }
+.dash-nav-link:hover{ background:#ffffffb3; color:var(--text); }
+.dash-nav-link.active{ background:#fff; color:var(--text); box-shadow: 0 1px 0 rgba(15,23,42,.03); }
 
-/* Overlay mobile (activado desde layout) */
-.dash-aside.mobile-open{ transform: translateX(0); }
-@media (max-width:1024px){
-  .dash-aside{
-    position: fixed; left:0; top:60px; bottom:0; width: 86vw; max-width: 320px;
-    transform: translateX(-105%); transition: transform .25s ease;
-    border-right: 1px solid var(--border); box-shadow: 0 10px 40px rgba(2,8,23,.15);
-  }
+/* —— Componentes base —— */
+.card{
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius: 1rem;
 }
+.card.pad{ padding:1.25rem; }          /* 20px */
+.card.pad-lg{ padding:1.5rem; }        /* 24px */
 
-/* Área principal */
-.dash-main{
-  padding: 24px;
-}
-@media (min-width:1024px){ .dash-main{ padding: 32px 40px; } }
-
-/* Tarjetas “glass” de alto contraste */
-.glass-card{
-  background: rgba(255,255,255,.9);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 10px 30px rgba(2,8,23,.06);
-  padding: 18px;
-  transition: transform .15s ease, box-shadow .15s ease, border-color .2s ease;
-}
-.glass-card:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 18px 40px rgba(2,8,23,.09);
-  border-color: rgba(124,58,237,.22);
-}
-
-/* Tarjetas de métrica */
-.stat-card .stat{
-  font: 800 28px/1.1 Inter,ui-sans-serif;
-  color: var(--text);
-}
-.stat-card .label{
-  color: var(--muted);
-  font-size: 13px; font-weight:600;
-}
-.stat-card .hint{
-  margin-top: 6px; font-size:12px; font-weight:700;
-}
-
-/* Botón gradiente genérico */
-.btn-gradient{
-  display:inline-flex; align-items:center; gap:8px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, var(--primary-2), var(--primary));
-  color:#fff; border:0; border-radius:12px;
-  font-weight:700; box-shadow: 0 8px 24px rgba(124,58,237,.35);
-  transition: transform .12s ease, box-shadow .12s ease, filter .2s ease;
-}
-.btn-gradient:hover{ transform: translateY(-1px); filter: saturate(1.05); box-shadow: 0 10px 28px rgba(124,58,237,.42); }
-
-/* Inputs estilo panel (usado en Courts/Reservations/Tournaments) */
-.field-glass{
-  width:100%;
-  background:#fff; border:1.5px solid var(--border);
-  border-radius:12px; padding:10px 12px; color:var(--text);
-  transition: border-color .2s ease, box-shadow .2s ease;
-}
-.field-glass:focus{
-  outline: none; border-color: rgba(124,58,237,.55);
-  box-shadow: 0 0 0 4px var(--ring);
-}
-
-/* Titulares con gradiente violeta */
-.heading-gradient{
-  background: linear-gradient(135deg, var(--primary-2), var(--primary));
-  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-}
-
-/* Grillas reutilizables */
-.cards-grid{ display:grid; gap:16px; grid-template-columns: repeat(1,minmax(0,1fr)); }
-@media (min-width:640px){ .cards-grid{ grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media (min-width:1024px){ .cards-grid{ grid-template-columns: repeat(4,minmax(0,1fr)); } }
-
-/* Encabezado fijo mobile (ya existe en layout) */
-@media (max-width:1024px){
-  .lg\\:hidden.fixed.top-0{ height:60px; }
-  .dash-main{ padding-top: 76px; }
-}
-
-/* ===== BYZOC DASHBOARD LIGHT REFRESH ===== */
-.theme-light {
-  --card-bg: #fff;
-  --card-border: #e5e7eb;       /* gray-200 */
-  --card-shadow: 0 6px 16px rgba(15, 23, 42, .06);
-  --muted: #64748b;             /* slate-500 */
-  --title: #0f172a;             /* slate-900 */
-  --subtitle: #334155;          /* slate-700 */
-  --ring: 0 0 0 3px rgba(99, 102, 241, .15); /* indigo-500/15 */
-  --bg: #f8fafc;                /* slate-50 */
-}
-
-/* Contenedor general del dashboard */
-.theme-light .dash-shell{
-  display:grid;
-  grid-template-columns: 260px 1fr;
-  gap: 0;
-  min-height:100vh;
-  background: var(--bg);
-}
-
-/* Sidebar */
-.theme-light .dash-aside{
-  position:sticky; top:0;
-  height:100dvh;
-  background:#ffffff;
-  border-right:1px solid #e2e8f0;
-  padding:20px 14px;
-}
-
-/* Navegación */
-.theme-light .dash-nav{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
-.theme-light .dash-nav-link{
-  display:flex; align-items:center;
-  gap:10px; padding:10px 12px; border-radius:10px;
-  color:#334155; text-decoration:none; font-weight:500;
-}
-.theme-light .dash-nav-link:hover{ background:#f1f5f9; }
-.theme-light .dash-nav-link.active{
-  background:linear-gradient(135deg,#8b5cf6,#7c3aed);
-  color:white;
-}
-
-/* Área principal */
-.theme-light .dash-main{
-  padding:28px clamp(16px,2.5vw,32px);
-  max-width:1400px; width:100%;
-}
-
-/* Tarjetas base (sustituye glass-card para modo claro) */
-.theme-light .card{
-  background:var(--card-bg);
-  border:1px solid var(--card-border);
-  border-radius:16px;
-  box-shadow:var(--card-shadow);
-  padding:18px;
-}
-
-/* Métricas compactas */
-.metric{
-  display:flex; flex-direction:column;
-}
-.metric .value{ font-size:28px; font-weight:800; color:var(--title); line-height:1; }
-.metric .label{ font-size:13px; color:var(--muted); }
-
-/* Títulos/separadores */
-.section-title{
-  color:var(--title);
-  font-weight:800;
-  font-size:20px;
-  margin:6px 0 14px;
-}
-
-/* Botones */
 .btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  gap:8px; padding:10px 14px; border-radius:10px; font-weight:600;
-  border:1px solid #e2e8f0; background:#fff; color:#0f172a;
+  border:1px solid var(--border);
+  border-radius:.75rem;
+  padding:.5rem .75rem;
+  font-size:.9rem;
 }
-.btn:hover{ background:#f8fafc; }
-.btn-primary{
-  border:0; background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff;
-  box-shadow:0 8px 20px rgba(139,92,246,.25);
+.btn:hover{ background:#f1f5f9; }      /* slate-100 */
+
+/* —— Métricas —— */
+.stat{ display:block; }
+.stat .label{
+  font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:#64748b;
 }
-.btn-primary:hover{ filter:brightness(.98); }
+.stat .value{ font-weight:600; font-size:1.75rem; line-height:2rem; margin-top:.25rem; }
+.stat .hint{ color:#64748b; font-size:.8rem; margin-top:.25rem; }
 
-/* Inputs */
-.field{
-  width:100%; padding:10px 12px; border-radius:10px;
-  border:1.5px solid #e5e7eb; background:#fff; color:#0f172a;
-}
-.field:focus{ outline:none; box-shadow:var(--ring); border-color:#a5b4fc; }
+/* Evitar radios/bordes “inflados” que traen algunos resets */
+section, nav, header, aside { border-radius: 0 !important; }
 
-/* Quick action cards */
-.quick-card{ transition:transform .15s ease, box-shadow .2s ease; }
-.quick-card:hover{ transform:translateY(-2px); box-shadow:0 10px 24px rgba(15,23,42,.08); }
+/* Ajustes finos para aspecto pro */
+:root { color-scheme: light; }
+html, body { background-color: #f8fafc; } /* slate-50 */
+a { text-underline-offset: 2px; }
 
-/* Helpers para iconos redondos */
-.icon-badge{
-  width:48px; height:48px; border-radius:14px;
-  display:flex; align-items:center; justify-content:center;
-  background:#f1f0ff; color:#7c3aed; font-size:24px;
-}
-
-/* Forzar tipografía oscura en headings que venían en blanco */
-.heading-gradient, .text-white{
-  color:var(--title) !important;
-  -webkit-text-fill-color:initial !important;
-}
-
-/* ——— FIX inputs/textarea con texto blanco ——— */
-.theme-light input,
-.theme-light textarea,
-.theme-light select {
-  color: #0f172a !important;                /* texto */
-  -webkit-text-fill-color: #0f172a !important;
-  background: #fff !important;
+/* === BYZOC Dashboard – Theme (Light / Green accent) === */
+:root{
+  --bg:#f6f7fb;                 /* canvas claro */
+  --panel:#ffffff;              /* panel base */
+  --subtle:#f1f5f9;            /* superficies suaves */
+  --border: #e6e8ee;           /* bordes finos */
+  --text:#0f172a;              /* slate-900 */
+  --muted:#64748b;             /* slate-500/600 */
+  --accent:#10b981;            /* green-500 */
+  --accent-600:#059669;        /* green-600 */
+  --accent-soft: rgba(16,185,129,.12);
+  --shadow-sm: 0 6px 20px rgba(2,6,23,.06);
+  --shadow-md: 0 10px 30px rgba(2,6,23,.08);
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
 }
 
-.theme-light input::placeholder,
-.theme-light textarea::placeholder {
-  color: #94a3b8 !important;                /* slate-400 */
-  opacity: 1;
+html,body{ background:var(--bg); color:var(--text); }
+
+/* —— Shell y superficies —— */
+.bz-shell{ max-width: 1200px; margin:0 auto; padding:24px; }
+@media (min-width:1024px){ .bz-grid{ display:grid; grid-template-columns: 260px 1fr; gap:24px; } }
+
+.bz-surface{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-sm);
+}
+.bz-surface--soft{
+  background: linear-gradient(180deg,#fff 0%, #fff 65%, rgba(255,255,255,.92) 100%);
+  border-color: var(--border);
 }
 
-/* Autofill chrome */
-.theme-light input:-webkit-autofill,
-.theme-light textarea:-webkit-autofill,
-.theme-light select:-webkit-autofill {
-  -webkit-text-fill-color: #0f172a !important;
-  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
-  box-shadow: 0 0 0 1000px #fff inset !important;
+/* —— Topbar —— */
+.bz-topbar{ border-radius: var(--radius-2xl); }
+
+/* —— Sidebar —— */
+.bz-aside{ padding:14px; }
+.bz-nav{ display:grid; gap:6px; }
+.bz-link{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius: 14px;
+  color: var(--muted); font-size:13px; font-weight:600;
+  transition: all .18s ease;
+}
+.bz-link:hover{ background:#f8fafc; color:var(--text); }
+.bz-link.active{
+  background: var(--accent-soft);
+  color: var(--accent-600);
+  border:1px solid rgba(16,185,129,.25);
+  box-shadow: inset 0 0 0 1px rgba(16,185,129,.08);
 }
 
-/* Por si algún wrapper heredó .text-white */
-.theme-light .text-white {
-  color: #0f172a !important;
-  -webkit-text-fill-color: #0f172a !important;
+/* —— Botones —— */
+.bz-btn{ padding:10px 14px; border-radius:14px; border:1px solid var(--border); font-size:13px; }
+.bz-btn:hover{ background:#f8fafc; }
+.bz-btn--primary{ background:var(--accent); color:#fff; border-color:transparent; }
+.bz-btn--primary:hover{ filter:brightness(1.03); }
+
+/* —— Cards —— */
+.bz-card{
+  background: #fff;
+  border:1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+.bz-card.pad{ padding:18px; }
+.bz-card.pad-lg{ padding:22px; }
+
+/* —— KPIs —— */
+.bz-kpi .label{
+  font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
+}
+.bz-kpi .value{ font-size:28px; font-weight:800; line-height:1.1; }
+.bz-kpi .hint{ font-size:12px; color:var(--muted); }
+
+/* —— Pills / Badges —— */
+.bz-pill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:999px; font-size:12px; font-weight:600;
+  background:#fff; border:1px solid var(--border);
+}
+.bz-pill--accent{ background: var(--accent-soft); color: var(--accent-600); border-color: transparent; }
+
+/* —— Listas limpias —— */
+.bz-list{ display:grid; gap:12px; }
+.bz-item{ border:1px solid var(--border); background:#fff; border-radius:16px; padding:14px; display:flex; justify-content:space-between; align-items:center; }
+
+/* —— Utilidades —— */
+.bz-hero-title{ font-weight:800; letter-spacing:-.02em; }
+.bz-sub{ font-size:13px; color:var(--muted); }
+
+/* === BYZOC: ajustes full-width y sidebar sticky === */
+
+/* Contenedor a todo lo ancho (con gutters cómodos) */
+.bz-shell.wide{ max-width:100%; padding-left:32px; padding-right:32px; }
+@media (min-width:1536px){
+  .bz-shell.wide{ padding-left:48px; padding-right:48px; }
+}
+
+/* Sidebar ocupa el alto útil y permite scroll interno */
+.bz-aside{ position:sticky; top:88px; height:calc(100vh - 120px); overflow:auto; }
+
+/* Hero con logo: layout equilibrado */
+.bz-hero{
+  display:flex; align-items:center; justify-content:space-between; gap:24px;
+}
+.bz-hero-left{ display:flex; align-items:center; gap:16px; }
+.bz-hero-logo{
+  width:56px; height:56px; border-radius:14px; overflow:hidden;
+  border:1px solid var(--border); box-shadow: var(--shadow-sm);
+  background:#fff center/cover no-repeat;
 }
