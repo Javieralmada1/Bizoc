@@ -5,6 +5,8 @@ import supabaseAdmin from '@/lib/supabaseAdmin'
 export async function POST(req: Request) {
   try {
     const form = await req.formData()
+    // Ya que usamos club_id en la consulta GET, asumimos que club_id se puede inferir del token.
+    // Usamos court_id directamente para la operación.
     const court_id = String(form.get('court_id') || '')
     if (!court_id) {
       return NextResponse.json({ ok:false, error:'Falta court_id' }, { status:400 })
@@ -16,14 +18,24 @@ export async function POST(req: Request) {
       open_time: string
       close_time: string
       slot_minutes: number
+      buffer_minutes: number // <-- Añadido
     }[] = []
 
     for (let d=0; d<=6; d++){
       const open = (form.get(`open_${d}`) as string) || ''
       const close = (form.get(`close_${d}`) as string) || ''
       const slot = Number(form.get(`slot_${d}`) || 60)
+      const buffer = Number(form.get(`buffer_${d}`) || 0) // <-- Añadido
+      
       if (open && close) {
-        rows.push({ court_id, weekday:d, open_time:open, close_time:close, slot_minutes:slot })
+        rows.push({ 
+          court_id, 
+          weekday:d, 
+          open_time:open, 
+          close_time:close, 
+          slot_minutes:slot,
+          buffer_minutes: buffer // <-- Añadido
+        })
       }
     }
 

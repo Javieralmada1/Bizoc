@@ -25,23 +25,18 @@ export default function PlayerRegisterPage() {
   ]
 
   useEffect(() => {
-    // Verificar si ya está logueado
     checkUser()
   }, [])
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
-      // Verificar si es jugador
       const { data: playerProfile } = await supabase
         .from('player_profiles')
         .select('id')
         .eq('id', user.id)
-        .single()
-      
-      if (playerProfile) {
-        router.replace('/players/dashboard')
-      }
+        .maybeSingle()
+      if (playerProfile) router.replace('/players/dashboard')
     }
   }
 
@@ -52,6 +47,26 @@ export default function PlayerRegisterPage() {
       [name]: value
     }))
   }
+
+  // FUNCIÓN handleResetPassword (DEFINICIÓN FINAL)
+  async function handleResetPassword() {
+    if (!formData.email) {
+      setMessage('Ingresa tu email y luego haz clic en "Recuperar Contraseña"')
+      return
+    }
+    try {
+      setLoading(true)
+      await supabase.auth.resetPasswordForEmail(formData.email, {
+        redirectTo: `${window.location.origin}/players/auth/reset-password`
+      })
+      setMessage('Te enviamos un correo para restablecer tu contraseña.')
+    } catch (error: any) {
+      setMessage(error.message || 'No se pudo enviar el correo de recuperación')
+    } finally {
+      setLoading(false)
+    }
+  }
+  // FIN DE LA DEFINICIÓN
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault()
@@ -104,35 +119,26 @@ export default function PlayerRegisterPage() {
           })
 
         if (profileError) {
-          console.error('Error creating player profile:', profileError)
-          // Si falla el perfil, intentamos eliminar el usuario creado
+          console.error('Error creating player profile (DB):', profileError)
           await supabase.auth.signOut()
-          throw new Error('Error al crear el perfil del jugador. Intenta nuevamente.')
+          
+          const dbErrorMessage = profileError.message || `[Código: ${profileError.code}] Error al guardar el perfil del jugador.`;
+          throw new Error(`DIAGNÓSTICO DB: ${dbErrorMessage}. Posiblemente RLS o tabla incorrecta.`);
         }
 
-        // 3. Verificar si necesita confirmación por email
+        // 3. Verificación de confirmación por email
         if (!authData.session) {
           setMessage('¡Registro exitoso! Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.')
-          // Limpiar formulario
           setFormData({
-            email: '',
-            password: '',
-            confirmPassword: '',
-            firstName: '',
-            lastName: '',
-            phone: '',
-            province: '',
-            city: '',
-            category: '7ª'
+            email: '', password: '', confirmPassword: '', firstName: '', lastName: '',
+            phone: '', province: '', city: '', category: '7ª'
           })
         } else {
-          // Si ya está logueado automáticamente
           router.push('/players/dashboard')
         }
       }
     } catch (error: any) {
-      console.error('Registration error:', error)
-      setMessage(error.message || 'Error al registrar el jugador')
+      setMessage(error.message || 'Error desconocido al registrar. Reintente.')
     } finally {
       setLoading(false)
     }
@@ -332,6 +338,17 @@ export default function PlayerRegisterPage() {
               {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
             </button>
           </form>
+
+          {/* Botón de recuperar contraseña (SINTAXIS CORREGIDA) */}
+          <div className="mt-6">
+            <button
+              onClick={handleResetPassword}
+              disabled={loading}
+              className="w-full text-sm text-slate-400 hover:text-blue-400 transition-colors"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          </div>
         </div>
 
         {/* Login Link */}

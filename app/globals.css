@@ -480,6 +480,9 @@ html, body {
 }
 
 .cta-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 16px 32px;
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   color: white;
@@ -1178,7 +1181,7 @@ body { background: var(--bg); color: var(--text); }
   backdrop-filter: blur(6px);
   border-radius: 1rem;     /* 16px */
   padding: .75rem;         /* 12px */
-  position: sticky; top: 72px;
+  position: sticky; top: 88px; /* Ajustado para el topbar */
 }
 .dash-aside.mobile-open{ display:block; }
 .dash-main{ padding-bottom: 4rem; }
@@ -1194,13 +1197,13 @@ body { background: var(--bg); color: var(--text); }
 .dash-nav-link.active{ background:#fff; color:var(--text); box-shadow: 0 1px 0 rgba(15,23,42,.03); }
 
 /* —— Componentes base —— */
-.card{
+.bz-card{
   background: var(--card);
   border:1px solid var(--border);
   border-radius: 1rem;
 }
-.card.pad{ padding:1.25rem; }          /* 20px */
-.card.pad-lg{ padding:1.5rem; }        /* 24px */
+.bz-card.pad{ padding:1.25rem; }          /* 20px */
+.bz-card.pad-lg{ padding:1.5rem; }        /* 24px */
 
 .btn{
   border:1px solid var(--border);
@@ -1211,20 +1214,27 @@ body { background: var(--bg); color: var(--text); }
 .btn:hover{ background:#f1f5f9; }      /* slate-100 */
 
 /* —— Métricas —— */
-.stat{ display:block; }
-.stat .label{
-  font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; color:#64748b;
+.bz-kpi .label{
+  font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);
 }
-.stat .value{ font-weight:600; font-size:1.75rem; line-height:2rem; margin-top:.25rem; }
-.stat .hint{ color:#64748b; font-size:.8rem; margin-top:.25rem; }
+.bz-kpi .value{ font-size:28px; font-weight:800; line-height:1.1; }
+.bz-kpi .hint{ font-size:12px; color:var(--muted); }
 
-/* Evitar radios/bordes “inflados” que traen algunos resets */
-section, nav, header, aside { border-radius: 0 !important; }
+/* —— Pills / Badges —— */
+.bz-pill{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:999px; font-size:12px; font-weight:600;
+  background:#fff; border:1px solid var(--border);
+}
+.bz-pill--accent{ background: var(--accent-soft); color: var(--accent-600); border-color: transparent; }
 
-/* Ajustes finos para aspecto pro */
-:root { color-scheme: light; }
-html, body { background-color: #f8fafc; } /* slate-50 */
-a { text-underline-offset: 2px; }
+/* —— Listas limpias —— */
+.bz-list{ display:grid; gap:12px; }
+.bz-item{ border:1px solid var(--border); background:#fff; border-radius:16px; padding:14px; display:flex; justify-content:space-between; align-items:center; }
+
+/* —— Utilidades —— */
+.bz-hero-title{ font-weight:800; letter-spacing:-.02em; }
+.bz-sub{ font-size:13px; color:var(--muted); }
 
 /* === BYZOC Dashboard – Theme (Light / Green accent) === */
 :root{
@@ -1262,6 +1272,25 @@ html,body{ background:var(--bg); color:var(--text); }
 
 /* —— Topbar —— */
 .bz-topbar{ border-radius: var(--radius-2xl); }
+.bz-topbar .bz-sub, .bz-topbar .bz-btn { color: var(--text) !important; }
+
+/* —— Inputs y selectores dentro de bz-card o bz-surface —— */
+.bz-card input, .bz-card select, .bz-card textarea,
+.bz-surface input, .bz-surface select, .bz-surface textarea {
+    color: var(--text) !important;
+    background-color: #fff !important;
+    border: 1px solid var(--border) !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+}
+
+.bz-card input:focus, .bz-card select:focus,
+.bz-surface input:focus, .bz-surface select:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+}
+
 
 /* —— Sidebar —— */
 .bz-aside{ padding:14px; }
@@ -1281,14 +1310,14 @@ html,body{ background:var(--bg); color:var(--text); }
 }
 
 /* —— Botones —— */
-.bz-btn{ padding:10px 14px; border-radius:14px; border:1px solid var(--border); font-size:13px; }
-.bz-btn:hover{ background:#f8fafc; }
-.bz-btn--primary{ background:var(--accent); color:#fff; border-color:transparent; }
+.bz-btn{ padding:10px 14px; border-radius:14px; border:1px solid var(--border); font-size:13px; color:var(--text); }
+.bz-btn:hover{ background:#f1f5f9; }
+.bz-btn--primary{ background:var(--accent); color:#fff !important; border-color:transparent; }
 .bz-btn--primary:hover{ filter:brightness(1.03); }
 
 /* —— Cards —— */
 .bz-card{
-  background: #fff;
+  background: var(--card);
   border:1px solid var(--border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
@@ -1308,6 +1337,7 @@ html,body{ background:var(--bg); color:var(--text); }
   display:inline-flex; align-items:center; gap:8px;
   padding:6px 10px; border-radius:999px; font-size:12px; font-weight:600;
   background:#fff; border:1px solid var(--border);
+  color: var(--text); /* Asegura que el texto sea visible */
 }
 .bz-pill--accent{ background: var(--accent-soft); color: var(--accent-600); border-color: transparent; }
 
@@ -1326,9 +1356,6 @@ html,body{ background:var(--bg); color:var(--text); }
 @media (min-width:1536px){
   .bz-shell.wide{ padding-left:48px; padding-right:48px; }
 }
-
-/* Sidebar ocupa el alto útil y permite scroll interno */
-.bz-aside{ position:sticky; top:88px; height:calc(100vh - 120px); overflow:auto; }
 
 /* Hero con logo: layout equilibrado */
 .bz-hero{

@@ -1,7 +1,9 @@
 'use client'
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation' // <-- Importamos useRouter
+import { supabase } from '@/lib/supabaseClient' // Importamos supabase para verificación de login
 
-// Tipos
+// Tipos (mantener)
 type Club = { 
   id: string
   name: string
@@ -34,6 +36,8 @@ type TimeSlot = {
 }
 
 const ReservationSystemImproved = () => {
+  const router = useRouter() // <-- Inicializamos router
+
   // Estados principales
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -44,7 +48,7 @@ const ReservationSystemImproved = () => {
   const [courts, setCourts] = useState<Court[]>([])
   const [slots, setSlots] = useState<TimeSlot[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
-  const [loadingClubs, setLoadingClubs] = useState(false) // Inicializado a false
+  const [loadingClubs, setLoadingClubs] = useState(false) 
   const [loadingCourts, setLoadingCourts] = useState(false)
   const [saving, setSaving] = useState(false)
   
@@ -71,7 +75,7 @@ const ReservationSystemImproved = () => {
   // Generar clave de idempotencia inicial
   useEffect(() => {
     idempotencyKeyRef.current = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    setLoadingClubs(true) // Set loading here, después del montaje
+    setLoadingClubs(true) 
   }, [])
 
   // Cargar clubes al inicio
@@ -99,7 +103,7 @@ const ReservationSystemImproved = () => {
     }
   }, [courtId, selectedDate])
 
-  // Funciones de carga
+  // Funciones de carga (mantener)
   const loadClubs = async () => {
     try {
       const response = await fetch('/api/clubs')
@@ -120,18 +124,17 @@ const ReservationSystemImproved = () => {
       const response = await fetch(`/api/courts?club_id=${clubId}`)
       const data = await response.json()
       
-      // EL FILTRO FUNCIONA AHORA QUE LA API DEVUELVE is_active
       const allCourts = data.courts || []
       const activeCourts = allCourts.filter((c: Court) => c.is_active)
       setCourts(activeCourts)
-      setCourtId(activeCourts[0]?.id ?? '') // Selecciona la primera cancha activa
+      setCourtId(activeCourts[0]?.id ?? '') 
       
       if (allCourts.length > 0 && activeCourts.length === 0) {
         setError('Todas las canchas de este club están inactivas o llenas.')
       } else if (allCourts.length === 0) {
         setError('Este club no tiene canchas registradas.')
       } else if (activeCourts.length > 0) {
-          setError('') // Éxito en carga de canchas
+          setError('') 
       }
 
     } catch (err) {
@@ -149,7 +152,6 @@ const ReservationSystemImproved = () => {
     const dateStr = date.toISOString().slice(0, 10)
     
     try {
-      // Endpoint corregido en la pregunta anterior
       const response = await fetch(`/api/schedules?courtId=${courtId}&date=${dateStr}`)
       const data = await response.json()
       
@@ -173,7 +175,7 @@ const ReservationSystemImproved = () => {
     }
   }
 
-  // Datos computados para filtros
+  // Datos computados (mantener)
   const provinces = useMemo(() => {
     const uniqueProvinces = Array.from(
       new Set(clubs.map(c => c.province).filter(Boolean))
@@ -199,7 +201,7 @@ const ReservationSystemImproved = () => {
     })
   }, [clubs, province, city])
 
-  // Handlers de filtros
+  // Handlers de filtros (mantener)
   const handleProvinceChange = (newProvince: string) => {
     setProvince(newProvince)
     setCity('')
@@ -238,7 +240,7 @@ const ReservationSystemImproved = () => {
     setSuccess('')
   }
 
-  // Manejo del calendario
+  // Manejo del calendario (mantener)
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
     const month = date.getMonth()
@@ -290,7 +292,7 @@ const ReservationSystemImproved = () => {
   // Confirmar reserva
   const confirmarReserva = async () => {
     if (!selectedDate || !selectedTime || !courtId || !clubId) {
-      setError('Por favor completa todos los campos requeridos')
+      setError('Por favor selecciona una cancha y un horario válido.')
       return
     }
 
@@ -316,17 +318,23 @@ const ReservationSystemImproved = () => {
       return
     }
 
+    // Preparar datos ISO
+    const startISO = new Date(selectedSlot.start).toISOString()
+    const endISO = new Date(selectedSlot.end).toISOString()
+    
     try {
       const reservationData = {
-        club_id: clubId,
-        court_id: courtId,
+        clubId: clubId, 
+        courtId: courtId, 
+        start: startISO, 
+        end: endISO, 
         customer_name: formData.nombre,
         customer_email: formData.email,
         customer_phone: formData.telefono,
         reservation_date: selectedDate.toISOString().slice(0, 10),
         start_time: selectedSlot.start.slice(11, 16),
         end_time: selectedSlot.end.slice(11, 16),
-        duration_hours: 1,
+        duration_hours: 1, 
         total_price: selectedSlot.price,
         notes: formData.jugadores,
         idempotency_key: idempotencyKeyRef.current
@@ -341,8 +349,9 @@ const ReservationSystemImproved = () => {
       const data = await response.json()
 
       if (response.ok) {
-        setSuccess(`¡Reserva confirmada! Referencia: ${data.booking_reference}. Te enviaremos un email de confirmación.`)
+        setSuccess(`¡Reserva confirmada! Referencia: ${data.booking_reference || data.reservation?.id}. Te enviaremos un email de confirmación.`)
         
+        // Resetear la vista para una nueva reserva
         setSelectedDate(null)
         setSelectedTime(null)
         setFormData({
@@ -354,12 +363,22 @@ const ReservationSystemImproved = () => {
         
         idempotencyKeyRef.current = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
         
+        // Recargar slots para mostrar el nuevo estado
         setTimeout(() => {
           if (courtId && selectedDate) {
             loadSlots(courtId, selectedDate)
           }
         }, 1000)
       } else {
+        // --- LÓGICA DE REDIRECCIÓN A LOGIN SI NO ESTÁ AUTORIZADO (401) ---
+        if (response.status === 401) {
+            setError('Debes iniciar sesión como Jugador para completar la reserva.')
+            setTimeout(() => {
+                router.push('/players/auth/login');
+            }, 1000);
+            return; // Detener el flujo aquí
+        }
+
         if (response.status === 409) {
           setError(data.error || 'Este horario ya fue reservado. Por favor selecciona otro.')
           if (courtId && selectedDate) {
@@ -388,7 +407,7 @@ const ReservationSystemImproved = () => {
   return (
     <div className="partidos-section">
       <div className="partidos-container" style={{ maxWidth: '1200px' }}>
-        {/* Header */}
+        {/* Header (mantener) */}
         <div className="partidos-header" style={{ marginBottom: '30px' }}>
           <h2 className="partidos-title">🎾 PadelReservas</h2>
           <p className="partidos-subtitle">Reserva tu cancha en segundos</p>
@@ -399,7 +418,7 @@ const ReservationSystemImproved = () => {
           )}
         </div>
 
-        {/* Filtros de Ubicación */}
+        {/* Filtros de Ubicación (mantener) */}
         <div className="partidos-form-card" style={{ marginBottom: '24px' }}>
           <h3 className="partidos-title" style={{ fontSize: '18px', marginBottom: '20px' }}>
             📍 Selecciona tu ubicación
@@ -494,7 +513,7 @@ const ReservationSystemImproved = () => {
           )}
         </div>
 
-        {/* Calendario y Horarios */}
+        {/* Calendario y Horarios (mantener) */}
         {courtId ? (
           <div style={{
             display: 'grid',

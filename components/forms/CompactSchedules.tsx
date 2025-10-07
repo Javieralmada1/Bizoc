@@ -9,7 +9,8 @@ const DURATIONS = [30, 45, 60, 90]
 type Court = {
   id: string
   name: string
-  hours: { weekday:number; open_time:string; close_time:string; slot_minutes:number }[]
+  // Aseguramos que el tipo incluya buffer_minutes
+  hours: { weekday:number; open_time:string; close_time:string; slot_minutes:number; buffer_minutes?:number|null }[] 
 }
 
 export default function CompactSchedules({ clubName, courts }:{
@@ -26,7 +27,7 @@ export default function CompactSchedules({ clubName, courts }:{
   )
 }
 
-// Utility component for a single day row
+// Componente para una fila de día (incluye la corrección de estilo para la visibilidad)
 function ScheduleRow({ row, setRows, isCopyable, copyRowToAll }: {
   row: any; // Simplified type for immediate use
   setRows: React.Dispatch<React.SetStateAction<any[]>>;
@@ -40,7 +41,8 @@ function ScheduleRow({ row, setRows, isCopyable, copyRowToAll }: {
   };
   
   return (
-    <div className={`grid items-center gap-3 py-3 border-b border-[var(--border)] last:border-b-0 ${row.on ? 'bg-white' : 'bg-[#fafafa]'}`}>
+    // La clase bg-white asegura que el fondo claro sea explícito
+    <div className={`grid grid-cols-[100px,1fr,140px] items-center gap-3 py-3 border-b border-[var(--border)] last:border-b-0 ${row.on ? 'bg-white' : 'bg-gray-50'}`}>
       
       {/* Columna 1: Día + Toggle */}
       <div className="flex items-center gap-3 px-3">
@@ -62,7 +64,8 @@ function ScheduleRow({ row, setRows, isCopyable, copyRowToAll }: {
           disabled={!row.on}
           value={row.open}
           onChange={e => handleChange('open', e.target.value)}
-          className="bz-card px-2 py-1 text-[13px] w-full"
+          // La clase bz-card asegura que se tomen los estilos de .bz-card input, resolviendo el problema de texto blanco.
+          className="bz-card px-2 py-1 w-full" 
         />
         <span className="text-sm text-slate-500">-</span>
         <input
@@ -70,7 +73,7 @@ function ScheduleRow({ row, setRows, isCopyable, copyRowToAll }: {
           disabled={!row.on}
           value={row.close}
           onChange={e => handleChange('close', e.target.value)}
-          className="bz-card px-2 py-1 text-[13px] w-full"
+          className="bz-card px-2 py-1 w-full"
         />
       </div>
 
@@ -80,7 +83,7 @@ function ScheduleRow({ row, setRows, isCopyable, copyRowToAll }: {
           disabled={!row.on}
           value={row.slot}
           onChange={e => handleChange('slot', Number(e.target.value))}
-          className="bz-card px-2 py-1 text-[13px] w-full"
+          className="bz-card px-2 py-1 w-full"
         >
           {DURATIONS.map(n => <option key={n} value={n}>{n} min</option>)}
         </select>
@@ -101,6 +104,7 @@ function ScheduleRow({ row, setRows, isCopyable, copyRowToAll }: {
 
 
 function CourtCard({ court }: { court: Court }) {
+  // Genera el estado inicial para los 7 días. Si hay datos, los carga. Si no, usa el valor por defecto.
   const initial = useMemo(() => {
     const map = new Map<number, any>()
     court.hours.forEach(h => map.set(h.weekday, h))
@@ -111,7 +115,8 @@ function CourtCard({ court }: { court: Court }) {
         open: h?.open_time ?? '08:00', // Valor por defecto
         close: h?.close_time ?? '22:00', // Valor por defecto
         slot: h?.slot_minutes ?? 60,
-        on: !!(h?.open_time && h?.close_time),
+        buffer: h?.buffer_minutes ?? 0, 
+        on: !!(h?.open_time && h?.close_time), // Marcar como "on" si ya hay horarios guardados
       }
     })
   }, [court.hours])
@@ -127,6 +132,7 @@ function CourtCard({ court }: { court: Court }) {
       open: r.open,
       close: r.close,
       slot: r.slot,
+      buffer: r.buffer, 
       on: r.on,
     })))
   }
@@ -141,6 +147,7 @@ function CourtCard({ court }: { court: Court }) {
           fd.append(`open_${r.d}`, r.open)
           fd.append(`close_${r.d}`, r.close)
           fd.append(`slot_${r.d}`, String(r.slot))
+          fd.append(`buffer_${r.d}`, String(r.buffer || 0)) 
         }
       })
       
@@ -156,12 +163,13 @@ function CourtCard({ court }: { court: Court }) {
   }
 
   async function previewDay() {
-    // Usamos el endpoint corregido en la pregunta anterior para obtener la disponibilidad
+    // Lógica para previsualizar, usando la API de disponibilidad
     const res = await fetch(`/api/schedules?courtId=${court.id}&date=${date}`) 
     const j = await res.json()
+    
     const slots = (j.slots ?? []).map((s:any) => ({
       t: dayjs(s.start).format('HH:mm'),
-      free: !!s.available
+      free: s.status === 'available'
     }))
     setPreview({ label: dayjs(date).format('ddd DD MMM'), slots })
   }
@@ -172,6 +180,7 @@ function CourtCard({ court }: { court: Court }) {
       open: '08:00',
       close: '22:00',
       slot: 60,
+      buffer: 0, 
       on: false,
     })));
   }

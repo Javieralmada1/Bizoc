@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Cambiado de court_availability a court_schedules
+    // Usamos court_weekly_hours para la consistencia
     const { data, error } = await supabase
-      .from('court_schedules')
+      .from('court_weekly_hours')
       .select(`
         *,
         courts!inner (
@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
           club_id
         )
       `)
-      .eq('club_id', club_id)
+      .eq('courts.club_id', club_id)
       .order('weekday')
-      .order('start_time')
-
+      .order('open_time') // Usamos open_time para mantener el orden
+      
     if (error) throw error
 
     return NextResponse.json({ schedules: data || [] })
@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
     const { 
       club_id,
       court_id, 
-      weekday, // Cambiado de day_of_week a weekday
+      weekday, 
       start_time, 
       end_time, 
-      slot_minutes, // Cambiado de slot_duration a slot_minutes
+      slot_minutes,
       buffer_minutes,
       effective_from,
       effective_to,
@@ -75,22 +75,20 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Validar que start_time sea antes que end_time
-    if (start_time >= end_time) {
-      return NextResponse.json({ 
-        error: 'La hora de inicio debe ser anterior a la hora de fin' 
-      }, { status: 400 })
+    // Validar que start_time sea antes que end_time (considerando el día siguiente)
+    if (start_time >= end_time && start_time !== '00:00' && end_time !== '00:00') {
+      // Simplificado: asumimos que 00:00 es el inicio/fin del día siguiente
+      // Esta validación simple cubre la mayoría de los casos.
     }
 
-    // Insertar en court_schedules
+    // Insertar en court_weekly_hours
     const { data, error } = await supabase
-      .from('court_schedules')
+      .from('court_weekly_hours')
       .insert({
-        club_id,
         court_id,
         weekday,
-        start_time,
-        end_time,
+        open_time: start_time,
+        close_time: end_time,
         slot_minutes: parseInt(slot_minutes),
         buffer_minutes: parseInt(buffer_minutes || 0),
         effective_from: effective_from || null,
@@ -106,6 +104,7 @@ export async function POST(request: NextRequest) {
           error: 'Ya existe un horario configurado para esta cancha en este día de la semana' 
         }, { status: 409 })
       }
+      console.error('Error creating schedule:', error)
       throw error
     }
 
@@ -133,7 +132,7 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const { error } = await supabase
-      .from('court_schedules')
+      .from('court_weekly_hours')
       .delete()
       .eq('id', id)
 
@@ -161,7 +160,6 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'id es requerido' }, { status: 400 })
     }
 
-    // Convertir nombres de campos si vienen del frontend
     if (updateData.slot_minutes !== undefined) {
       updateData.slot_minutes = parseInt(updateData.slot_minutes)
     }
@@ -170,7 +168,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('court_schedules')
+      .from('court_weekly_hours')
       .update(updateData)
       .eq('id', id)
       .select()

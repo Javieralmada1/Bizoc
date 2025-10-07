@@ -137,8 +137,9 @@ export default function AuthHeader() {
           
           {!user ? (
             <>
+              {/* CORREGIDO: Redirige a la página principal de cada portal */}
               <button 
-                onClick={() => router.push('/club')}
+                onClick={() => router.push('/clubs')}
                 className="byzoc-nav-item admin"
               >
                 Soy Club
@@ -154,7 +155,7 @@ export default function AuthHeader() {
             <>
               {profile?.type === 'player' && (
                 <button 
-                  onClick={() => router.push('/club')}
+                  onClick={() => router.push('/clubs')}
                   className="byzoc-nav-item"
                   style={{ 
                     background: 'rgba(59, 130, 246, 0.1)',

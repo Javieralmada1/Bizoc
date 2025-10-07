@@ -2,10 +2,11 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 import dayjs from 'dayjs'
+import { buildDailySlots } from '@/lib/slots' // Importamos la utilidad de cálculo
 
 export const dynamic = 'force-dynamic'
 
-// http://localhost:3000/api/schedules?courtId=XXXX&date=YYYY-MM-DD
+// GET /api/schedules?courtId=XXXX&date=YYYY-MM-DD
 export async function GET(req: NextRequest) {
   const supabase = createRouteHandlerClient({ cookies })
 
@@ -18,87 +19,68 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing courtId or date parameter' }, { status: 400 })
     }
 
-    // Consulta optimizada para obtener disponibilidad
-    // --- CONSULTA SQL CORREGIDA ---
-    const availabilityQuery = `
-      WITH time_slots AS (
-        SELECT 
-          cwh.court_id,
-          generate_series(
-            $2::date + cwh.open_time,
-            $2::date + cwh.close_time - INTERVAL '1 minute',
-            make_interval(mins => cwh.slot_minutes)
-          ) AS slot_start,
-          cwh.slot_minutes AS slot_duration -- Cambiado de slot_minutes a slot_duration para el CTE
-        FROM court_weekly_hours cwh  -- <<-- TABLA CORREGIDA
-        WHERE cwh.court_id = $1 
-          AND cwh.weekday = EXTRACT(DOW FROM $2::date) -- <<-- COLUMNA CORREGIDA
-      ),
-      slot_details AS (
-        SELECT 
-          ts.court_id,
-          ts.slot_start,
-          ts.slot_start + make_interval(mins => ts.slot_duration) as slot_end,
-          COALESCE(pr.price, 25.00) as price,
-          COALESCE(pr.is_peak_hour, false) as is_peak_hour
-        FROM time_slots ts
-        LEFT JOIN pricing_rules pr ON pr.court_id = ts.court_id
-          AND ts.slot_start::time >= pr.start_time 
-          AND ts.slot_start::time < pr.end_time
-      )
-      SELECT 
-        sd.slot_start,
-        sd.slot_end,
-        sd.price,
-        sd.is_peak_hour,
-        CASE 
-          WHEN r.id IS NOT NULL THEN 'occupied'
-          WHEN rh.id IS NOT NULL THEN 'held'
-          ELSE 'available'
-        END as status,
-        r.customer_name,
-        r.booking_reference
-      FROM slot_details sd
-      LEFT JOIN reservations r ON r.court_id = sd.court_id 
-        AND r.reservation_date = $2::date
-        AND r.start_time::time = sd.slot_start::time
-        AND r.status IN ('confirmed', 'pending')
-      LEFT JOIN reservation_holds rh ON rh.court_id = sd.court_id 
-        AND rh.reservation_date = $2::date
-        AND rh.start_time::time = sd.slot_start::time
-        AND rh.expires_at > NOW()
-      ORDER BY sd.slot_start;
-    `
+    const date = dayjs(dateStr)
+    const weekday = date.day() // 0 (Sun) to 6 (Sat)
 
-    // Ejecutar la consulta SQL
-    const { data: slots, error } = await supabase.rpc('execute_sql', {
-      query: availabilityQuery,
-      params: [courtId, dateStr],
-    }).select('*')
+    // 1. Obtener la configuración semanal para ese día y cancha
+    const { data: scheduleData, error: scheduleError } = await supabase
+      .from('court_weekly_hours')
+      .select('open_time, close_time, slot_minutes')
+      .eq('court_id', courtId)
+      .eq('weekday', weekday)
+      .eq('is_active', true)
+      .maybeSingle()
 
-
-    if (error) {
-      console.error('SQL Execution Error:', error)
-      return NextResponse.json({ error: 'Failed to fetch availability data', details: error.message }, { status: 500 })
-    }
-
-    // El resultado de la RPC (Remote Procedure Call) es un array de objetos con una propiedad 'execute_sql' que contiene el resultado real.
-    // Accedemos a la data dentro de slots[0].execute_sql
-    const finalSlots = slots ? (slots as any)[0].execute_sql : []
+    if (scheduleError) throw scheduleError
     
-    // Convertir los resultados de texto a objetos JavaScript
-    const parsedSlots = finalSlots.map((slot:any) => ({
-      ...slot,
-      slot_start: dayjs(slot.slot_start).toISOString(),
-      slot_end: dayjs(slot.slot_end).toISOString(),
-      price: parseFloat(slot.price),
-      is_peak_hour: slot.is_peak_hour === 't', // Convertir 't' a true
-    }))
+    // Si no hay horario configurado para este día, terminamos
+    if (!scheduleData) {
+      return NextResponse.json({ courtId, date: dateStr, slots: [] })
+    }
+    
+    // 2. Obtener todas las reservas (y holds) para ese día
+    const { data: reservations, error: resError } = await supabase
+      .from('reservations')
+      .select('start_at, end_at, status') // Traemos solo lo necesario para el cálculo
+      .eq('court_id', courtId)
+      .gte('start_at', date.startOf('day').toISOString())
+      .lte('end_at', date.endOf('day').toISOString())
+      .in('status', ['confirmed', 'pending']) // Solo las que realmente bloquean el slot
 
-    return NextResponse.json({ courtId, date: dateStr, slots: parsedSlots })
+    if (resError) throw resError
+
+    // 3. Generar slots usando la función de librería
+    const slots = buildDailySlots({
+      date: dateStr,
+      // Nota: tz (timezone) se asume como el del servidor o dayjs.tz.guess()
+      open: scheduleData.open_time,
+      close: scheduleData.close_time,
+      slotMinutes: scheduleData.slot_minutes,
+      reservations: reservations || []
+    })
+
+    // NOTA: Esta lógica simplificada no trae precios ni is_peak_hour.
+    // Si necesitas esa información en el front, la deberías obtener por separado 
+    // o integrarla aquí (ej. consultando la tabla pricing_rules).
+    // Por ahora, solo devolvemos disponibilidad (available: true/false).
+
+    return NextResponse.json({ 
+        courtId, 
+        date: dateStr, 
+        slots: slots.map(s => ({
+          ...s,
+          status: s.available ? 'available' : 'occupied',
+          price: 25, // Fallback price (puedes ajustarlo si sabes el precio base)
+          is_peak_hour: false // Falso por defecto
+        })) 
+    })
 
   } catch (error: any) {
-    console.error('API Error:', error)
-    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 })
+    console.error('API Error in /api/schedules:', error.message)
+    // Devolvemos un error 500 amigable
+    return NextResponse.json({ 
+      error: 'Internal Server Error: ' + error.message, 
+      details: 'Check server logs for database connection/RLS issues.'
+    }, { status: 500 })
   }
 }

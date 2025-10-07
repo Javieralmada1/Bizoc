@@ -14,7 +14,6 @@ interface ClubFallbackRow {
     name: string;
 }
 
-// Tipo clave: Definimos la relación 'club' como un ARRAY de objetos.
 interface ProfileResult {
     club_id: string | null;
     club: Array<{ name: string | null }> | null; 
@@ -36,12 +35,9 @@ export default async function SchedulesPage() {
         .eq('id', user.id)
         .maybeSingle()
         
-      // CASTING EXPLÍCITO al tipo que define el campo 'club' como un array.
       const profile = rawProfile as ProfileResult | null;
 
       activeClubId = profile?.club_id ?? null;
-      
-      // SOLUCIÓN DEFINITIVA: Accedemos al primer elemento del array club
       activeClubName = profile?.club?.[0]?.name ?? null; 
     }
   } catch (e) {
@@ -73,16 +69,15 @@ export default async function SchedulesPage() {
 
   // 3) Traer canchas del club y sus horarios (Lógica de CompactSchedules)
   const [{ data: courtsRes }, { data: hours }] = await Promise.all([
-    supabaseAdmin
+    supabaseAdmin // Usamos Admin para ignorar RLS
       .from('courts')
       .select('id, name')
       .eq('club_id', activeClubId)
       .order('name'),
     
-    supabaseAdmin
+    supabaseAdmin // Usamos Admin para ignorar RLS
       .from('court_weekly_hours')
-      .select('*, courts!inner(club_id)') 
-      .eq('courts.club_id', activeClubId) 
+      .select('*') 
       .then((res) => ({ data: res.data ?? [], error: res.error })),
   ])
   
@@ -93,7 +88,7 @@ export default async function SchedulesPage() {
       name: c.name as string
     }));
 
-  const hoursByCourt = new Map<string, any[]>()
+  const hoursByCourt = new Map<string, any>()
   ;(hours || []).forEach((h: any) => {
     const courtId = String(h.court_id);
     if (courts.some(c => c.id === courtId)) { 
@@ -106,11 +101,12 @@ export default async function SchedulesPage() {
   const payload = courts.map((c) => ({
     id: c.id,
     name: c.name, 
-    hours: (hoursByCourt.get(c.id) ?? []).map((h) => ({
+    hours: (hoursByCourt.get(c.id) ?? []).map((h: any) => ({
       weekday: h.weekday as number,
       open_time: h.open_time as string,
       close_time: h.close_time as string,
       slot_minutes: h.slot_minutes as number,
+      buffer_minutes: h.buffer_minutes as number | null, // Incluir para CompactSchedules
     })),
   }))
   

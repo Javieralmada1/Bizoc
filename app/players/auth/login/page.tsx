@@ -18,12 +18,19 @@ export default function PlayerLoginPage() {
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
+      // SOLO verificamos si tiene perfil de jugador y redirigimos.
+      // Si no tiene perfil de jugador, asumimos que debe seguir en el flujo actual (loguearse/registrar).
       const { data: playerProfile } = await supabase
         .from('player_profiles')
         .select('id')
         .eq('id', user.id)
-        .single()
-      if (playerProfile) router.replace('/players/dashboard')
+        .maybeSingle()
+
+      if (playerProfile) {
+        // Redirigir si es un jugador
+        router.replace('/players/dashboard')
+      }
+      // Si no es jugador, simplemente se queda en esta página.
     }
   }
 
@@ -32,24 +39,43 @@ export default function PlayerLoginPage() {
     setLoading(true)
     setMessage(null)
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
 
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: playerProfile } = await supabase
-          .from('player_profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single()
+      const user = authData.user
+      if (!user) throw new Error('No se pudo obtener el usuario después del login.')
 
-        if (playerProfile) {
-          router.push('/players/dashboard')
-        } else {
-          setMessage('Esta cuenta no pertenece a un jugador. ¿Administras un club? Ve a la sección de clubs.')
-          await supabase.auth.signOut()
-        }
+      // 1. Verificar perfil de JUGADOR
+      const { data: playerProfile } = await supabase
+        .from('player_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (playerProfile) {
+        // ÉXITO: Es un jugador, redirigir al dashboard de jugadores
+        router.push('/players/dashboard')
+        return
       }
+      
+      // 2. Si no es jugador, verificar si es CLUB (y cerrar sesión para forzar la elección correcta)
+      const { data: clubProfile } = await supabase
+        .from('club_profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (clubProfile) {
+        // Fallo: Se logueó con un perfil de Club en el portal de Jugadores
+        setMessage('Esta cuenta está registrada como Club. Por favor, cierra sesión aquí e inicia sesión en la sección de Clubes.')
+        await supabase.auth.signOut()
+        return
+      }
+
+      // 3. Si no tiene NINGÚN perfil (ni jugador, ni club):
+      setMessage('Tu cuenta no tiene un perfil de Jugador asociado. Por favor, regístrate como Jugador o verifica tu email.')
+      await supabase.auth.signOut()
+      
     } catch (error: any) {
       setMessage(error.message || 'Error al iniciar sesión')
     } finally {
