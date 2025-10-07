@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabaseClient'
+import Link from 'next/link'
 
 // Asume que esta es la estructura de un partido en tu DB
-// ¡Es importante que coincida con tus tablas!
 interface Match {
   id: string;
   match_date: string;
-  tournaments: { name: string, category: string } | null; 
-  courts: { name: string, clubs: { name: string } }; 
-  instance: string; 
-  team1: { name: string, id: number }; 
-  team2: { name: string, id: number };
-  winner_team_id: number;
-  sets: { team1_score: number, team2_score: number }[];
+  tournaments: { name: string, category: string }; // Relación con torneos
+  courts: { name: string, clubs: { name: string } }; // Relación anidada
+  instance: string; // Ej: 'Octavos de Final'
+  team1: { name: string }; // Relación con equipos
+  team2: { name: string };
+  winner_team_id: string;
+  sets: any[]; // Asume que 'sets' es un JSON
 }
 
 export default function HistorialPage() {
@@ -26,16 +26,15 @@ export default function HistorialPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: teamIds } = await supabase.from('team_players').select('team_id').eq('player_id', user.id)
-        
-        if (teamIds && teamIds.length > 0) {
+        if (teamIds) {
           const playerTeamIds = teamIds.map(t => t.team_id)
           const { data, error } = await supabase
             .from('matches')
-            .select('id, match_date, instance, winner_team_id, sets, tournaments(name, category), courts(name, clubs(name)), team1:team1_id(id, name), team2:team2_id(id, name)')
+            .select('*, tournaments(name, category), courts(name, clubs(name)), team1:team1_id(name), team2:team2_id(name)')
             .or(`team1_id.in.(${playerTeamIds.join(',')}),team2_id.in.(${playerTeamIds.join(',')})`)
             .order('match_date', { ascending: false })
 
-          if (error) console.error("Error al obtener los partidos:", error)
+          if (error) console.error("Error fetching matches:", error)
           else setMatches(data as Match[])
         }
       }
@@ -48,7 +47,8 @@ export default function HistorialPage() {
     return <div className="text-center p-8 text-slate-500">Cargando historial de partidos...</div>
   }
 
-  const getFinalScore = (sets: { team1_score: number, team2_score: number }[] | null) => {
+  // Función para obtener el resultado final del partido a partir de los sets
+  const getFinalScore = (sets: any[], team1Id: string, team2Id: string) => {
     if (!sets || sets.length === 0) return "N/A";
     let team1SetsWon = 0;
     let team2SetsWon = 0;
@@ -62,6 +62,7 @@ export default function HistorialPage() {
     }
     return `${team1SetsWon} - ${team2SetsWon}`;
   }
+
 
   return (
     <div className="space-y-6">
@@ -81,7 +82,7 @@ export default function HistorialPage() {
                 <th className="px-6 py-4 font-semibold text-slate-600 text-left">Instancia</th>
                 <th className="px-6 py-4 font-semibold text-slate-600 text-left">Pareja A</th>
                 <th className="px-6 py-4 font-semibold text-slate-600 text-left">Pareja B</th>
-                <th className="px-6 py-4 font-semibold text-slate-600 text-left">Resultado (Sets)</th>
+                <th className="px-6 py-4 font-semibold text-slate-600 text-left">Resultado</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -96,10 +97,10 @@ export default function HistorialPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-600">{match.courts.clubs.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-600">{match.instance}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${match.winner_team_id === match.team1.id ? 'font-bold text-emerald-600' : 'text-slate-600'}`}>{match.team1.name}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${match.winner_team_id === match.team2.id ? 'font-bold text-emerald-600' : 'text-slate-600'}`}>{match.team2.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-600">{match.team1.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-600">{match.team2.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-800 font-bold">
-                     {getFinalScore(match.sets)}
+                     {getFinalScore(match.sets, match.team1_id, match.team2_id)}
                   </td>
                 </tr>
               )) : (
