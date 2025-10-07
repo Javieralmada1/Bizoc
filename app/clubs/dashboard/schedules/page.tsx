@@ -3,7 +3,7 @@ import supabaseAdmin from '@/lib/supabaseAdmin'
 import { createServerClient } from '@/lib/supabaseServer'
 import CompactSchedules from '@/components/forms/CompactSchedules'
 
-// Definición de tipos mínimos para la lógica
+// Definición de tipos
 interface CourtNameAndId {
     id: string;
     name: string;
@@ -14,9 +14,12 @@ interface ClubFallbackRow {
     name: string;
 }
 
-// Tipo para la consulta del club, asumiendo que el campo 'club' puede ser un array o un objeto.
-// Lo definimos como una estructura con la forma más segura para acceder a él.
-type ClubRelation = Array<{ name: string | null }> | null | { name: string | null };
+// Tipo clave: Definimos la relación 'club' como un ARRAY de objetos.
+interface ProfileResult {
+    club_id: string | null;
+    club: Array<{ name: string | null }> | null; 
+}
+
 
 export default async function SchedulesPage() {
   let activeClubId: string | null = null
@@ -29,26 +32,17 @@ export default async function SchedulesPage() {
     if (user) {
       const { data: rawProfile } = await supabase
         .from('club_profiles')
-        // La sintaxis 'club:clubs!inner(name)' crea la ambigüedad.
         .select('club_id, club:clubs!inner(name)') 
         .eq('id', user.id)
         .maybeSingle()
         
-      // CORRECCIÓN CLAVE: Acceder al club de forma segura, asumiendo que
-      // puede ser un objeto o el primer elemento de un array.
-      const clubData = (rawProfile as any)?.club; // Usamos any para eludir la inferencia
+      // CASTING EXPLÍCITO al tipo que define el campo 'club' como un array.
+      const profile = rawProfile as ProfileResult | null;
+
+      activeClubId = profile?.club_id ?? null;
       
-      activeClubId = rawProfile?.club_id ?? null;
-      
-      if (clubData) {
-          // Si es un array, toma el nombre del primer elemento
-          if (Array.isArray(clubData) && clubData.length > 0) {
-              activeClubName = clubData[0].name ?? null;
-          // Si no es un array, toma el nombre del objeto directamente
-          } else if (typeof clubData === 'object' && clubData.name) { 
-              activeClubName = clubData.name as string;
-          }
-      }
+      // SOLUCIÓN DEFINITIVA: Accedemos al primer elemento del array club
+      activeClubName = profile?.club?.[0]?.name ?? null; 
     }
   } catch (e) {
     // fallback silencioso

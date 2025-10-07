@@ -779,7 +779,7 @@ const ReservationSystemImproved = () => {
           }}>
             <div style={{ fontSize: '64px', marginBottom: '24px' }}>🎾</div>
             <h3 style={{ color: '#1e293b', fontSize: '24px', marginBottom: '16px', fontWeight: '600' }}>
-              Bienvenido a PadelReservas
+              Bienvenido a Byzoc
             </h3>
             <p style={{ color: '#64748b', fontSize: '16px', marginBottom: '0' }}>
               Selecciona tu ubicación, club y cancha arriba para comenzar tu reserva

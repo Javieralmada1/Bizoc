@@ -1,6 +1,6 @@
 // app/api/recordings/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin' // ajustá el path si es necesario
+import supabaseAdmin from '@/lib/supabaseAdmin' // ajustá el path si es necesario
 
 // --- CORS ---
 const corsHeaders = {

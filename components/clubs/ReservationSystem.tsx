@@ -830,7 +830,7 @@ const EnhancedReservationSystem = () => {
           }}>
             <div style={{ fontSize: '64px', marginBottom: '24px' }}>🎾</div>
             <h3 style={{ color: 'white', fontSize: '24px', marginBottom: '16px' }}>
-              Bienvenido a PadelReservas
+              Bienvenido a Byzoc
             </h3>
             <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '0' }}>
               Selecciona un club y cancha arriba para comenzar tu reserva
