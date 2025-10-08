@@ -1,11 +1,6 @@
 // app/api/admin/reservations/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import supabaseAdmin from '@/lib/supabaseAdmin' // Corregido: Importa el cliente admin
 
 // GET - Obtener reservas de un club
 export async function GET(request: NextRequest) {
@@ -19,7 +14,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let query = supabase
+    let query = supabaseAdmin // Corregido: Usa supabaseAdmin
       .from('reservations')
       .select(`
         *,

@@ -8,13 +8,18 @@ import { supabase } from '@/lib/supabaseClient'
 interface Match {
   id: string;
   match_date: string;
+  // CORRECCIÓN: Se ajusta para que sea un objeto o nulo, que es lo que Supabase devuelve
+  // para una relación de clave foránea.
   tournaments: { name: string, category: string } | null; 
-  courts: { name: string, clubs: { name: string } }; 
+  // CORRECCIÓN: Se ajusta la anidación para que coincida con la consulta.
+  courts: { name: string, clubs: { name: string } | null }; 
   instance: string; 
+  // CORRECCIÓN: Se ajusta para que sea un objeto, no un array.
   team1: { name: string, id: number }; 
   team2: { name: string, id: number };
-  winner_team_id: number;
-  sets: { team1_score: number, team2_score: number }[];
+  winner_team_id: number | null; // El ganador puede ser nulo
+  // CORRECCIÓN: Los sets pueden ser nulos si el partido no se ha jugado
+  sets: { team1_score: number, team2_score: number }[] | null;
 }
 
 export default function HistorialPage() {
@@ -35,8 +40,13 @@ export default function HistorialPage() {
             .or(`team1_id.in.(${playerTeamIds.join(',')}),team2_id.in.(${playerTeamIds.join(',')})`)
             .order('match_date', { ascending: false })
 
-          if (error) console.error("Error al obtener los partidos:", error)
-          else setMatches(data as Match[])
+          if (error) {
+            console.error("Error al obtener los partidos:", error)
+          } else {
+            // CORRECCIÓN: Se realiza una conversión a `unknown` primero para evitar el error de tipo.
+            // Esto le dice a TypeScript que confíe en que la forma de los datos es correcta.
+            setMatches(data as unknown as Match[])
+          }
         }
       }
       setLoading(false)
@@ -88,16 +98,19 @@ export default function HistorialPage() {
               {matches.length > 0 ? matches.map(match => (
                 <tr key={match.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
+                    {/* CORRECCIÓN: Se accede a `tournaments` como un objeto */}
                     <div className="font-medium text-slate-800">{match.tournaments?.name || 'Partido Amistoso'}</div>
                     <div className="text-slate-500">{match.tournaments?.category}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-600">
                     {new Date(match.match_date).toLocaleDateString('es-AR')} - {new Date(match.match_date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-slate-600">{match.courts.clubs.name}</td>
+                  {/* CORRECCIÓN: Se accede a `clubs` como un objeto que puede ser nulo */}
+                  <td className="px-6 py-4 whitespace-nowrap text-slate-600">{match.courts?.clubs?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-600">{match.instance}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${match.winner_team_id === match.team1.id ? 'font-bold text-emerald-600' : 'text-slate-600'}`}>{match.team1.name}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${match.winner_team_id === match.team2.id ? 'font-bold text-emerald-600' : 'text-slate-600'}`}>{match.team2.name}</td>
+                  {/* CORRECCIÓN: Se accede a `team1` y `team2` como objetos */}
+                  <td className={`px-6 py-4 whitespace-nowrap ${match.winner_team_id === match.team1?.id ? 'font-bold text-emerald-600' : 'text-slate-600'}`}>{match.team1?.name}</td>
+                  <td className={`px-6 py-4 whitespace-nowrap ${match.winner_team_id === match.team2?.id ? 'font-bold text-emerald-600' : 'text-slate-600'}`}>{match.team2?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-800 font-bold">
                      {getFinalScore(match.sets)}
                   </td>

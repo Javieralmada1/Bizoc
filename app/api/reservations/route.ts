@@ -1,126 +1,75 @@
-// app/api/reservations/route.ts
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import supabaseAdmin from '@/lib/supabaseAdmin'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-}
-export async function OPTIONS(){ return new NextResponse(null,{status:204, headers:cors as any}) }
-
-/**
- * GET /api/reservations?courtId=1&date=YYYY-MM-DD
- */
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url)
-  const courtId = url.searchParams.get('courtId')
-  const date = url.searchParams.get('date')
-  
-  if (!courtId || !date) return NextResponse.json({ ok:false, error:'courtId y date son requeridos' }, { status:400, headers:cors as any })
-
-  const { data, error } = await supabaseAdmin
-    .from('reservations')
-    .select('*')
-    .eq('court_id', courtId)
-    // Buscamos dentro del día específico
-    .gte('start_at', `${date}T00:00:00+00:00`)
-    .lte('end_at', `${date}T23:59:59+00:00`)
-    .order('start_at')
-    
-  if (error) return NextResponse.json({ ok:false, error:error.message }, { status:500, headers:cors as any })
-  return NextResponse.json({ ok:true, reservations: data }, { headers:cors as any })
+type Body = {
+  club_id: string
+  court_id: string
+  start: string // ISO UTC
+  end: string   // ISO UTC
+  customer_name?: string
+  customer_phone?: string
+  customer_email?: string
 }
 
-/**
- * POST /api/reservations
- */
-export async function POST(req: NextRequest) {
+function overlaps(aStart: string, aEnd: string, bStart: string, bEnd: string) {
+  return !(aEnd <= bStart || aStart >= bEnd)
+}
+
+export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { 
-      courtId, start, end, clubId, 
-      customer_name, customer_email, customer_phone, 
-      total_price, notes 
-    } = body
-    
-    if (!courtId || !start || !end) {
-      return NextResponse.json({ ok:false, error:'courtId, start y end son requeridos' }, { status:400, headers:cors as any })
+    const body = (await req.json()) as Body
+    const { club_id, court_id, start, end } = body
+
+    if (!club_id || !court_id || !start || !end) {
+      return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 })
     }
 
-    // 1. OBTENER Y FORZAR AUTENTICACIÓN
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-        // Devolvemos 401 para que el frontend redirija al login (lógica ya implementada)
-        return NextResponse.json({ ok: false, error: 'Autenticación requerida.' }, { status: 401, headers: cors as any })
-    }
-    const playerId = user.id; // Usamos el ID del usuario como player_id
-
-    // 2. Re-validación de solapamiento
-    const { data: overlappingReservations } = await supabaseAdmin
+    const { data: existing } = await supabaseAdmin
       .from('reservations')
-      .select('id')
-      .eq('court_id', courtId)
-      .in('status', ['confirmed', 'pending'])
-      .lt('start_at', end) 
-      .gt('end_at', start)
+      .select('start_at,end_at,status')
+      .eq('court_id', court_id)
+      .neq('status', 'cancelled')
+      .gte('start_at', start)
+      .lt('end_at', end)
 
-    if (overlappingReservations?.length) {
-      return NextResponse.json({ ok: false, error: 'El turno ya fue tomado por otro usuario.' }, { status: 409, headers: cors as any })
+    const conflict = (existing ?? []).some((r) =>
+      overlaps(start, end, r.start_at, r.end_at)
+    )
+
+    if (conflict) {
+      return NextResponse.json(
+        { error: 'El horario ya fue reservado' },
+        { status: 409 }
+      )
     }
 
-    // 3. Insertar la reserva usando player_id (CORREGIDO)
-    const { data: insertedReservation, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from('reservations')
-      .insert({ 
-        court_id: courtId, 
-        club_id: clubId,
-        start_at: start, 
-        end_at: end, 
-        player_id: playerId, // <--- CORRECCIÓN CLAVE: Usa player_id
-        customer_name, 
-        customer_email,
-        customer_phone,
-        total_price,
-        notes,
-        status: 'confirmed'
+      .insert({
+        club_id,
+        court_id,
+        start_at: start,
+        end_at: end,
+        customer_name: body.customer_name ?? null,
+        customer_phone: body.customer_phone ?? null,
+        customer_email: body.customer_email ?? null,
+        status: 'confirmed',
       })
-      .select().single()
-      
-    if (error) {
-      console.error('Error al insertar reserva:', error)
-      const msg = /no_overlap|overlap/i.test(error.message) ? 'El turno ya fue tomado' : error.message
-      return NextResponse.json({ ok:false, error: msg }, { status:500, headers:cors as any })
-    }
-    
-    return NextResponse.json({ 
-      ok:true, 
-      reservation: insertedReservation, 
-      booking_reference: insertedReservation.id 
-    }, { headers:cors as any })
-    
-  } catch (e:any) {
-    console.error('Error en POST /api/reservations:', e)
-    return NextResponse.json({ ok:false, error:e?.message ?? 'create failed' }, { status:500, headers:cors as any })
+      .select('id')
+      .single()
+
+    if (error) throw error
+
+    const booking_reference = `BYZ-${String(data.id).slice(0, 8).toUpperCase()}`
+    return NextResponse.json(
+      { reservation: { id: data.id }, booking_reference },
+      { status: 201 }
+    )
+  } catch (e: any) {
+    console.error('[reservations] POST', e?.message)
+    return NextResponse.json(
+      { error: 'No se pudo crear la reserva' },
+      { status: 500 }
+    )
   }
-}
-
-/**
- * DELETE /api/reservations?id=UUID   (cancela)
- */
-export async function DELETE(req: NextRequest) {
-  const url = new URL(req.url)
-  const id = url.searchParams.get('id')
-  if (!id) return NextResponse.json({ ok:false, error:'id requerido' }, { status:400, headers:cors as any })
-
-  const { error } = await supabaseAdmin
-    .from('reservations')
-    .update({ status:'cancelled' }).eq('id', id)
-    
-  if (error) return NextResponse.json({ ok:false, error:error.message }, { status:500, headers:cors as any })
-  return NextResponse.json({ ok:true }, { headers:cors as any })
 }

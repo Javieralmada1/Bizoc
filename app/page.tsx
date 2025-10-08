@@ -1,387 +1,51 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabaseClient'
-import BeelupPlayer from '@/components/players/BeelupPlayer'
-import ReservationSystemImproved from '@/components/clubs/ReservationSystemImproved'
-import Link from 'next/link'
+// app/page.tsx
+import supabaseAdmin from '@/lib/supabaseAdmin'
 
-// Utilidades
-const fechasDisponibles = Array.from({ length: 7 }, (_, i) => {
-  const d = new Date()
-  d.setDate(d.getDate() - i)
-  return d.toISOString().slice(0, 10)
-})
-
-function buildLocalDayRange(dateStr: string) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const start = new Date(y, m - 1, d, 0, 0, 0, 0)
-  const end = new Date(y, m - 1, d, 23, 59, 59, 999)
-  return { start, end }
-}
-
-async function fetchMatchesDelDia(
-  supabase: any,
-  { clubId, courtId, date }: { clubId: string; courtId: string; date: string },
-  setMatches: (rows: any[]) => void
-) {
-  if (!clubId || !courtId || !date) return
-  const { start, end } = buildLocalDayRange(date)
-  const { data, error } = await supabase
-    .from('matches')
-    .select('*')
-    .eq('club_id', clubId)
-    .eq('court_id', courtId)
-    .gte('scheduled_at', start.toISOString())
-    .lt('scheduled_at', end.toISOString())
-    .order('scheduled_at')
-  if (error) {
-    console.error('fetchMatchesDelDia error', error)
-    setMatches([])
-    return
-  }
-  setMatches(data || [])
-}
-
-export default function Home() {
-  // Estados de navegación
-  const [mode, setMode] = useState<'home' | 'reservas' | 'partidos'>('home')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  
-  // Estados de datos
-  const [clubs, setClubs] = useState<any[]>([])
-  const [courts, setCourts] = useState<any[]>([])
-  const [matches, setMatches] = useState<any[]>([])
-  const [matchesLoading, setMatchesLoading] = useState(false)
-  
-  // Estados de búsqueda de partidos
-  const [matchClub, setMatchClub] = useState('')
-  const [matchCourt, setMatchCourt] = useState('')
-  const [matchDate, setMatchDate] = useState('')
-  const [matchHora, setMatchHora] = useState('')
-  const [partidoEncontrado, setPartidoEncontrado] = useState<any>(null)
-  const [partidoBuscado, setPartidoBuscado] = useState(false)
-
-  // Detectar mobile de forma reactiva
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    async function fetchData() {
-      const { data: clubsData } = await supabase.from('clubs').select('*')
-      setClubs(clubsData || [])
-      const { data: courtsData } = await supabase.from('courts').select('*')
-      setCourts(courtsData || [])
-    }
-    fetchData()
-  }, [])
-
-  // Cargar partidos del día cuando cambian los filtros
-  useEffect(() => {
-    let active = true
-    async function load() {
-      if (!matchClub || !matchCourt || !matchDate) return
-      setMatchesLoading(true)
-      try {
-        await fetchMatchesDelDia(supabase, {
-          clubId: matchClub,
-          courtId: matchCourt,
-          date: matchDate
-        }, rows => { if (active) setMatches(rows) })
-      } finally {
-        if (active) setMatchesLoading(false)
-      }
-    }
-    load()
-    return () => { active = false }
-  }, [matchClub, matchCourt, matchDate])
-
-  // Computed values
-  const courtsOfClub = courts.filter(c => c.club_id === matchClub)
-  const horariosUnicos = matches
-    .filter(m => m.scheduled_at)
-    .map(m => new Date(m.scheduled_at).toTimeString().slice(0, 5))
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .sort()
-
-  // Buscar partido específico
-  function buscarPartidoSeguro() {
-    setPartidoBuscado(true)
-    setPartidoEncontrado(null)
-    if (!matchClub || !matchCourt || !matchDate || !matchHora) return
-
-    const partido = matches.find(m => {
-      if (!m.scheduled_at) return false
-      const fecha = new Date(m.scheduled_at)
-      if (isNaN(fecha.getTime())) return false
-      const [ah, am] = matchHora.split(':').map(Number)
-      return fecha.getHours() === ah && fecha.getMinutes() === am
-    })
-
-    if (partido) {
-      setPartidoEncontrado(partido)
-    }
-  }
+export default async function HomePage() {
+  const { data: clubsData } = await supabaseAdmin.from('clubs').select('id').limit(1)
+  const clubs: { id: string }[] = Array.isArray(clubsData) ? clubsData : []
 
   return (
-    <div className="theme-light">
-      {/* Navegación Principal */}
-      <nav className="landing-nav">
-        <div className="landing-nav-container">
-          {/* Logo */}
-          <Link href="/" className="landing-brand" onClick={() => setMode('home')}>
-            <div className="landing-brand-icon">
-              <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-                <path d="M12 20L18 26L28 14" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="landing-brand-text">
-              <h1>Byzoc</h1>
-              {!isMobile && <span>Tu cancha, tu momento</span>}
-            </div>
-          </Link>
-
-          {/* Menu Desktop */}
-          {!isMobile && (
-            <div className="landing-nav-menu">
-              <button 
-                className={`landing-nav-btn ${mode === 'home' ? 'active' : ''}`}
-                onClick={() => setMode('home')}
-              >
-                Inicio
-              </button>
-              <button 
-                className={`landing-nav-btn ${mode === 'reservas' ? 'active' : ''}`}
-                onClick={() => setMode('reservas')}
-              >
-                Reservar Cancha
-              </button>
-              <button 
-                className={`landing-nav-btn ${mode === 'partidos' ? 'active' : ''}`}
-                onClick={() => setMode('partidos')}
-              >
-                Ver Partidos
-              </button>
-              {/* CORREGIDO: Botones de navegación principal */}
-              <Link href="/clubs" className="landing-nav-btn admin">
-                Admin Club
-              </Link>
-              <Link href="/players" className="landing-nav-btn player">
-                Soy Jugador
-              </Link>
-            </div>
-          )}
-
-          {/* Botón Mobile Menu */}
-          {isMobile && (
-            <button 
-              className="landing-mobile-toggle"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-          )}
+    <main className="max-w-6xl mx-auto px-6 py-16">
+      {/* HERO */}
+      <section className="text-center max-w-4xl mx-auto mb-16">
+        <div className="inline-block px-4 py-1 mb-6 rounded-full border border-violet-200 text-violet-600 text-sm font-medium">
+          ⚡ Plataforma #1 de Pádel en Argentina
         </div>
+        <h2 className="text-5xl font-extrabold leading-tight text-slate-900 mb-4">
+          Encuentra tu cancha perfecta<br />
+          <span className="text-violet-600">y revive tus partidos</span>
+        </h2>
+        <p className="text-lg text-slate-600">
+          Busca clubes, reserva canchas disponibles y mira tus partidos grabados desde cualquier dispositivo.
+        </p>
+      </section>
 
-        {/* Menu Mobile Desplegable */}
-        {isMobile && mobileMenuOpen && (
-          <div className="landing-mobile-menu">
-            <button 
-              className={`landing-mobile-item ${mode === 'home' ? 'active' : ''}`}
-              onClick={() => { setMode('home'); setMobileMenuOpen(false); }}
-            >
-              Inicio
-            </button>
-            <button 
-              className={`landing-mobile-item ${mode === 'reservas' ? 'active' : ''}`}
-              onClick={() => { setMode('reservas'); setMobileMenuOpen(false); }}
-            >
-              Reservar Cancha
-            </button>
-            <button 
-              className={`landing-mobile-item ${mode === 'partidos' ? 'active' : ''}`}
-              onClick={() => { setMode('partidos'); setMobileMenuOpen(false); }}
-            >
-              Ver Partidos
-            </button>
-            <hr className="landing-mobile-divider" />
-            {/* CORREGIDO: Botones de navegación móvil */}
-            <Link 
-              href="/clubs" 
-              className="landing-mobile-item admin"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Admin Club
-            </Link>
-            <Link 
-              href="/players" 
-              className="landing-mobile-item player"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Soy Jugador
-            </Link>
-          </div>
-        )}
-      </nav>
+      {/* CTA */}
+      <div className="flex gap-4 justify-center mb-12">
+        <a href="/reservas" className="px-6 py-3 rounded-xl text-white font-medium bg-emerald-600 hover:bg-emerald-700">
+          Reservar Cancha
+        </a>
+        <a href="/partidos" className="px-6 py-3 rounded-xl font-medium border border-slate-300 hover:bg-slate-100">
+          Ver Partidos
+        </a>
+      </div>
 
-      {/* Contenido Principal */}
-      <main className="landing-main">
-        {/* MODO: HOME */}
-        {mode === 'home' && (
-          <div className="landing-home">
-            {/* Hero Section */}
-            <section className="hero-section">
-              <div className="hero-content">
-                <div className="hero-badge">
-                  <span className="hero-badge-icon">⚡</span>
-                  <span>Plataforma #1 de Pádel en Argentina</span>
-                </div>
-                
-                <h1 className="hero-title">
-                  Tu cancha de pádel,
-                  <span className="hero-title-gradient"> tu momento perfecto</span>
-                </h1>
-                
-                <p className="hero-subtitle">
-                  Reserva canchas al instante, revive tus mejores partidos y conecta con la comunidad. 
-                  Todo en un solo lugar.
-                </p>
-
-                <div className="hero-actions">
-                  <button 
-                    className="hero-btn-primary"
-                    onClick={() => setMode('reservas')}
-                  >
-                    Reservar Cancha
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </button>
-                  <button 
-                    className="hero-btn-secondary"
-                    onClick={() => setMode('partidos')}
-                  >
-                    Ver Partidos
-                  </button>
-                </div>
-
-                {/* Stats */}
-                <div className="hero-stats">
-                  <div className="hero-stat">
-                    <div className="hero-stat-value">50+</div>
-                    <div className="hero-stat-label">Clubes</div>
-                  </div>
-                  <div className="hero-stat">
-                    <div className="hero-stat-value">10K+</div>
-                    <div className="hero-stat-label">Jugadores</div>
-                  </div>
-                  <div className="hero-stat">
-                    <div className="hero-stat-value">24/7</div>
-                    <div className="hero-stat-label">Disponible</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hero Image/Visual */}
-              <div className="hero-visual">
-                <div className="hero-card">
-                  <div className="hero-card-badge">EN VIVO</div>
-                  <div className="hero-card-title">Club Pádel Buenos Aires</div>
-                  <div className="hero-card-subtitle">Cancha 3 • Final del Torneo</div>
-                </div>
-              </div>
-            </section>
-
-            {/* Features Grid */}
-            <section className="features-section">
-              <div className="features-container">
-                <h2 className="features-title">Todo lo que necesitás</h2>
-                
-                <div className="features-grid">
-                  <div className="feature-card">
-                    <div className="feature-icon">🎥</div>
-                    <h3 className="feature-title">Grabación HD</h3>
-                    <p className="feature-desc">Capturá todos tus partidos en alta definición</p>
-                  </div>
-
-                  <div className="feature-card">
-                    <div className="feature-icon">⚡</div>
-                    <h3 className="feature-title">Highlights Instantáneos</h3>
-                    <p className="feature-desc">Marcá y compartí los mejores puntos al instante</p>
-                  </div>
-
-                  <div className="feature-card">
-                    <div className="feature-icon">📱</div>
-                    <h3 className="feature-title">Multi-plataforma</h3>
-                    <p className="feature-desc">Accedé desde cualquier dispositivo</p>
-                  </div>
-
-                  <div className="feature-card">
-                    <div className="feature-icon">🏆</div>
-                    <h3 className="feature-title">Torneos</h3>
-                    <p className="feature-desc">Organizá y seguí torneos completos</p>
-                  </div>
-
-                  <div className="feature-card">
-                    <div className="feature-icon">📊</div>
-                    <h3 className="feature-title">Estadísticas</h3>
-                    <p className="feature-desc">Analizá tu rendimiento con datos detallados</p>
-                  </div>
-
-                  <div className="feature-card">
-                    <div className="feature-icon">🔗</div>
-                    <h3 className="feature-title">Compartir Fácil</h3>
-                    <p className="feature-desc">Links directos para cada highlight</p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* CTA Section */}
-            <section className="cta-section">
-              <div className="cta-card">
-                <h2 className="cta-title">¿Listo para comenzar?</h2>
-                <p className="cta-subtitle">
-                  Únete a miles de jugadores que ya disfrutan de la mejor experiencia de pádel digital
-                </p>
-                <div className="cta-actions">
-                  <button className="cta-btn-primary" onClick={() => setMode('reservas')}>
-                    Reservar Ahora
-                  </button>
-                  {/* CORREGIDO: Link a la página de inicio de Clubs */}
-                  <Link href="/clubs" className="cta-btn-secondary">
-                    ¿Administras un Club?
-                  </Link>
-                </div>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* MODO: RESERVAS */}
-        {mode === 'reservas' && <ReservationSystemImproved />}
-
-        {/* MODO: PARTIDOS */}
-        {mode === 'partidos' && (
-          <div className="partidos-section">
-            <div className="partidos-container">
-              {/* ... (código de búsqueda de partidos) ... */}
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+      {/* KPIs simples */}
+      <div className="flex gap-10 justify-center text-center text-slate-600 mb-16">
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">{clubs.length}+</h3>
+          <p className="text-sm">Clubes</p>
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">10K+</h3>
+          <p className="text-sm">Jugadores</p>
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-slate-900">24/7</h3>
+          <p className="text-sm">Disponible</p>
+        </div>
+      </div>
+    </main>
   )
 }

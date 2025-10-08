@@ -1,11 +1,6 @@
 // app/api/admin/schedules/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import supabaseAdmin from '@/lib/supabaseAdmin' // Corregido: Importa el cliente admin
 
 // PATCH - Actualizar horario específico (activar/desactivar, cambiar horarios, etc.)
 export async function PATCH(
@@ -47,7 +42,7 @@ export async function PATCH(
       }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin // Corregido: Usa supabaseAdmin
       .from('court_availability')
       .update(updateData)
       .eq('id', params.id)
@@ -92,7 +87,7 @@ export async function DELETE(
 ) {
   try {
     // Verificar si hay reservas futuras para este horario
-    const { data: reservationCheck, error: checkError } = await supabase
+    const { data: reservationCheck, error: checkError } = await supabaseAdmin // Corregido: Usa supabaseAdmin
       .from('court_availability')
       .select('court_id')
       .eq('id', params.id)
@@ -101,7 +96,7 @@ export async function DELETE(
     if (checkError) throw checkError
 
     if (reservationCheck) {
-      const { data: reservations, error: reservationError } = await supabase
+      const { data: reservations, error: reservationError } = await supabaseAdmin // Corregido: Usa supabaseAdmin
         .from('reservations')
         .select('id')
         .eq('court_id', reservationCheck.court_id)
@@ -117,7 +112,7 @@ export async function DELETE(
       }
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin // Corregido: Usa supabaseAdmin
       .from('court_availability')
       .delete()
       .eq('id', params.id)
